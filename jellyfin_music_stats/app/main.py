@@ -82,6 +82,7 @@ def meta(request: Request):
         "collector": {
             "enabled": settings.collector_enabled,
             "last_poll": c.state.last_poll if c else None,
+            "poll_interval": settings.poll_interval,
             "last_error": c.state.last_error if c else None,
             "lastfm": bool(settings.lastfm_api_key),
         },

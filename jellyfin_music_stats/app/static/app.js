@@ -237,6 +237,12 @@ function renderStatus(meta) {
   const c = meta.collector;
   if (!c.enabled) { el.className = "status"; el.title = "Opsamling slået fra (mangler Jellyfin URL/API-nøgle)"; return; }
   if (c.last_error) { el.className = "status err"; el.title = `Fejl: ${c.last_error}`; return; }
+  const age = c.last_poll ? Date.now() / 1000 - c.last_poll : 0;
+  if (age > Math.max(60, c.poll_interval * 3)) {
+    el.className = "status err";
+    el.title = `Opsamlingen er gået i stå – sidste tjek af Jellyfin for ${Math.round(age / 60)} min. siden. Genstart add-on'et.`;
+    return;
+  }
   el.className = "status ok";
   el.title = c.last_poll ? `Forbundet til Jellyfin – sidst tjekket ${new Date(c.last_poll * 1000).toLocaleTimeString("da-DK")}` : "Starter…";
 }

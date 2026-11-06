@@ -66,6 +66,7 @@ class Collector:
         self.settings = settings
         self.client = client
         self.state = CollectorState()
+        self._last_sessions: Optional[list] = None
         self.known_tracks = {r["item_id"] for r in db.query("SELECT item_id FROM tracks")}
 
     async def run(self) -> None:
@@ -82,6 +83,7 @@ class Collector:
         now = time.time()
         sessions = await self.client.sessions()
         self.state.last_poll = now
+        self._log_sessions(sessions)
         seen = set()
 
         for s in sessions:
@@ -133,6 +135,19 @@ class Collector:
             self._finish(play, now)
         self.state.active.clear()
 
+    def _log_sessions(self, sessions: list) -> None:
+        """One log line whenever what Jellyfin reports changes, so 'nothing gets recorded' can be diagnosed."""
+        lines = []
+        for s in sessions:
+            item = s.get("NowPlayingItem")
+            what = f"{item.get('Type')} '{item.get('Name')}'" if item else "intet"
+            lines.append(f"{s.get('Client')} på {s.get('DeviceName')} ({s.get('UserName') or 'ingen bruger'}): {what}")
+        summary = sorted(lines)
+        if summary != self._last_sessions:
+            self._last_sessions = summary
+            log.info("Jellyfin rapporterer %d session(er)%s", len(summary),
+                     "".join(f"\n  - {line}" for line in summary))
+
     @staticmethod
     def _restarted(play: ActivePlay, position: float) -> bool:
         """Same track again on repeat: position jumped back to the start after nearly finishing."""
@@ -161,6 +176,8 @@ class Collector:
             "counted": int(listened >= needed),
         })
         self.state.plays_recorded += 1
+        log.info("gemt: '%s' (%s) – %ds lyttet, %s", play.name, play.user_name, listened,
+                 "talt som lytning" if listened >= needed else "sprunget over")
 
     async def _fetch_track(self, item_id: str, user_id: Optional[str], fallback: dict) -> None:
         try:

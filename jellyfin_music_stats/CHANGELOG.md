@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.2
+
+- Loggen viser nu, hvad Jellyfin rapporterer (app, enhed, bruger og hvad der spilles), hver gang det ændrer sig, og hver gemt afspilning
+- Statusprikken bliver rød, hvis opsamlingen er gået i stå, i stedet for at forblive grøn
+
 ## 0.5.1
 
 - "Genrer over tid" og "Musikhumør over tid" var tomme, når al data lå i én eller to perioder; de vises nu som stablede søjler, indtil der er nok data til en kurve
