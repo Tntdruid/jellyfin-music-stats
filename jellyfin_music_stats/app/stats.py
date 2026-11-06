@@ -226,7 +226,7 @@ def top(scope: Scope, kind: str, limit: int) -> list:
 def _series_over_time(scope: Scope, bucket: str, field: str, limit: int) -> dict:
     cte, params = _plays_cte(scope)
     rows = db.query(
-        f"""{cte} SELECT {BUCKETS[bucket]} AS b, g.value AS k, COUNT(*) AS n
+        f"""{cte} SELECT {BUCKETS[bucket]} AS b, TRIM(g.value) AS k, COUNT(*) AS n
             FROM p, json_each(p.{field}) g GROUP BY b, k""",
         params,
     )

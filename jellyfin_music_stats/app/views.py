@@ -80,7 +80,7 @@ def detail(scope: Scope, kind: str, key: str) -> Optional[dict]:
         params,
     )
     tags = db.query(
-        f"""{base} SELECT 'genre' AS kind, g.value AS k, COUNT(*) AS n FROM ap, json_each(ap.genres) g GROUP BY k
+        f"""{base} SELECT 'genre' AS kind, TRIM(g.value) AS k, COUNT(*) AS n FROM ap, json_each(ap.genres) g GROUP BY k
             UNION ALL
             SELECT 'mood', m.value, COUNT(*) FROM ap, json_each(ap.moods) m GROUP BY m.value""",
         params,

@@ -60,7 +60,7 @@ def to_track(item: dict) -> dict:
         "album_id": item.get("AlbumId"),
         "album_artist": item.get("AlbumArtist"),
         "artists": artists,
-        "genres": item.get("Genres") or [],
+        "genres": [g.strip() for g in item.get("Genres") or [] if g.strip()],
         "tags": item.get("Tags") or [],
         "year": item.get("ProductionYear"),
         "duration": ticks / TICKS_PER_SECOND if ticks else None,

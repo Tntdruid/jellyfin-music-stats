@@ -139,15 +139,19 @@ function renderTop(id, rows, linkFor = null) {
 function renderShareArea(id, data, bucket, colorFor) {
   const opt = baseOption();
   const totals = data.labels.map((_, i) => data.series.reduce((s, x) => s + x.data[i], 0));
+  // an area needs at least two points to have any width; with fewer buckets draw stacked bars
+  const bars = data.labels.length < 3;
   opt.xAxis.data = data.labels.map((l) => fmtLabel(l, bucket));
-  opt.xAxis.boundaryGap = false;
+  opt.xAxis.boundaryGap = bars;
   opt.yAxis.max = 100;
   opt.yAxis.axisLabel = { formatter: "{value} %" };
   opt.tooltip.valueFormatter = (v) => `${fmt(v)} %`;
   opt.series = data.series.map((s, i) => ({
     name: s.label || s.name,
-    type: "line", stack: "share", areaStyle: { opacity: 0.85 }, symbol: "none", smooth: 0.3,
-    lineStyle: { width: 0 },
+    stack: "share",
+    ...(bars
+      ? { type: "bar", barMaxWidth: 120 }
+      : { type: "line", areaStyle: { opacity: 0.85 }, symbol: "none", smooth: 0.3, lineStyle: { width: 0 } }),
     itemStyle: { color: colorFor(s.name, i) },
     data: s.data.map((v, j) => (totals[j] ? (v / totals[j]) * 100 : 0)),
   }));

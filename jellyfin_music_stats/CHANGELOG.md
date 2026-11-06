@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1
+
+- "Genrer over tid" og "Musikhumør over tid" var tomme, når al data lå i én eller to perioder; de vises nu som stablede søjler, indtil der er nok data til en kurve
+- Mellemrum før og efter genrenavne fjernes (fx " Stage & Screen")
+
 ## 0.5.0
 
 - Hver bruger ser automatisk sin egen statistik: HA-brugeren matches med Jellyfin-brugeren med samme navn
