@@ -18,7 +18,7 @@ Se [jellyfin_music_stats/DOCS.md](jellyfin_music_stats/DOCS.md) for opsætning.
 
 ## Installation i Home Assistant
 
-1. Gå til **Indstillinger → Add-ons → Add-on-butik → ⋮ → Repositories**.
+1. Gå til **Indstillinger → Apps → Apps butik → ⋮ → Repositories**.
 2. Tilføj `https://github.com/Tntdruid/jellyfin-music-stats`.
 3. Find **Jellyfin Music Stats** i butikken og installér det.
 

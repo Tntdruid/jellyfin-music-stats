@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0
+
+- Databasen ligger nu i add-on'ets offentlige config-mappe (`addon_configs/…_jellyfin_music_stats/music_stats.db`), så du kan se og kopiere den via Samba
+- En eksisterende database flyttes automatisk første gang, så din historik bliver bevaret
+- Standard-URL'en til Jellyfin er nu Jellyfin-add-on'ets interne værtsnavn
+
 ## 0.3.1
 
 - Siden opdaterer sig selv, når en ny afspilning er gemt; det er ikke længere nødvendigt at genindlæse

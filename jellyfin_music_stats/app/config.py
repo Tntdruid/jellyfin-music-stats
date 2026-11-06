@@ -5,6 +5,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DATA_DIR = Path(os.environ.get("DATA_DIR", "/data"))
+# The add-on's public config folder (map: addon_config), visible as addon_configs/<slug> over Samba.
+# Falls back to DATA_DIR when it isn't mounted, e.g. in local development.
+DB_DIR = Path(os.environ.get("DB_DIR") or ("/config" if os.path.isdir("/config") else DATA_DIR))
 
 
 @dataclass

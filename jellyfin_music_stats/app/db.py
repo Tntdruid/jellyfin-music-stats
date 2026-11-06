@@ -1,9 +1,13 @@
 import json
+import logging
+import shutil
 import sqlite3
 import threading
 from typing import Optional
 
-from config import DATA_DIR
+from config import DATA_DIR, DB_DIR
+
+log = logging.getLogger("db")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS tracks (
@@ -45,11 +49,27 @@ _lock = threading.Lock()
 _conn: Optional[sqlite3.Connection] = None
 
 
+DB_NAME = "music_stats.db"
+
+
+def _migrate_from_data_dir() -> None:
+    """Versions before 0.4.0 kept the database in the private /data folder; move it over once."""
+    old, new = DATA_DIR / DB_NAME, DB_DIR / DB_NAME
+    if old == new or not old.exists() or new.exists():
+        return
+    for suffix in ("", "-wal", "-shm"):
+        src = old.with_name(DB_NAME + suffix)
+        if src.exists():
+            shutil.move(str(src), str(new.with_name(DB_NAME + suffix)))
+    log.info("moved database from %s to %s", old, new)
+
+
 def connect() -> sqlite3.Connection:
     global _conn
     if _conn is None:
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
-        _conn = sqlite3.connect(DATA_DIR / "music_stats.db", check_same_thread=False)
+        DB_DIR.mkdir(parents=True, exist_ok=True)
+        _migrate_from_data_dir()
+        _conn = sqlite3.connect(DB_DIR / DB_NAME, check_same_thread=False)
         _conn.row_factory = sqlite3.Row
         _conn.execute("PRAGMA journal_mode=WAL")
         _conn.executescript(SCHEMA)
