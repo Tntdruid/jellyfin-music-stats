@@ -1,5 +1,5 @@
 name: Jellyfin Music Stats
-version: "0.1.3"
+version: "0.2.0"
 slug: jellyfin_music_stats
 description: Lyttestatistik for musik i Jellyfin – top-lister, genrer, heatmap og humør
 url: https://github.com/Tntdruid/jellyfin-music-stats

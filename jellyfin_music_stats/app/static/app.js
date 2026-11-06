@@ -39,7 +39,9 @@ async function api(path, extra = {}) {
 }
 
 function chart(id) {
-  if (!charts[id]) charts[id] = echarts.init(document.getElementById(id), null, { renderer: "canvas" });
+  const el = document.getElementById(id);
+  if (charts[id] && charts[id].getDom() !== el) charts[id].dispose();  // container was re-rendered
+  if (!charts[id] || charts[id].isDisposed()) charts[id] = echarts.init(el, null, { renderer: "canvas" });
   return charts[id];
 }
 
@@ -101,22 +103,34 @@ function renderTimeline(t, bucket) {
   chart("timeline").setOption(opt, true);
 }
 
-function renderTop(id, rows) {
+function cover(imageId, name, cls = "img") {
+  const letter = esc((name || "?")[0]).replace(/'/g, "");
+  return imageId
+    ? `<img class="${cls}" loading="lazy" src="api/image/${esc(imageId)}" alt="" onerror="this.outerHTML='<div class=${cls}>${letter}</div>'">`
+    : `<div class="${cls}">${letter}</div>`;
+}
+
+const artistLink = (name) => `#/artist/${encodeURIComponent(name)}`;
+
+function renderTop(id, rows, linkFor = null) {
   const el = document.getElementById(id);
   if (!rows.length) { el.innerHTML = `<div class="empty">Ingen data endnu</div>`; return; }
   const max = rows[0].plays;
-  el.innerHTML = rows.map((r) => `
+  el.innerHTML = rows.map((r) => {
+    const tag = linkFor ? `a class="row" href="${esc(linkFor(r))}"` : `div class="row"`;
+    return `
     <li>
-      ${r.image_id
-        ? `<img class="img" loading="lazy" src="api/image/${esc(r.image_id)}" alt="" onerror="this.outerHTML='<div class=img>${esc((r.name || "?")[0]).replace(/'/g, "")}</div>'">`
-        : `<div class="img">${esc((r.name || "?")[0])}</div>`}
-      <div class="meta">
-        <div class="name" title="${esc(r.name)}">${esc(r.name)}</div>
-        ${r.sub ? `<div class="sub">${esc(r.sub)}</div>` : ""}
-        <div class="bar" style="width:${(r.plays / max) * 100}%"></div>
-      </div>
-      <div class="count">${fmt(r.plays)}<br>${fmt(r.minutes)} min</div>
-    </li>`).join("");
+      <${tag}>
+        ${cover(r.image_id, r.name)}
+        <div class="meta">
+          <div class="name" title="${esc(r.name)}">${esc(r.name)}</div>
+          ${r.sub ? `<div class="sub">${esc(r.sub)}</div>` : ""}
+          <div class="bar" style="width:${(r.plays / max) * 100}%"></div>
+        </div>
+        <div class="count">${fmt(r.plays)}<br>${fmt(r.minutes)} min</div>
+      </${linkFor ? "a" : "div"}>
+    </li>`;
+  }).join("");
 }
 
 function renderShareArea(id, data, bucket, colorFor) {
@@ -228,10 +242,9 @@ async function loadMeta() {
   sel.innerHTML = `<option value="">Alle brugere</option>` +
     state.meta.users.map((u) => `<option value="${esc(u.id)}">${esc(u.name || u.id)}</option>`).join("");
   sel.value = current;
-  sel.hidden = state.meta.users.length < 2;
 }
 
-async function load() {
+async function loadDashboard() {
   const bucket = state.bucket || autoBucket();
   const trend = autoBucket() === "day" && state.range === "30" ? "week" : autoBucket();
   document.querySelectorAll("#bucket button").forEach((b) => b.classList.toggle("on", b.dataset.bucket === bucket));
@@ -244,7 +257,7 @@ async function load() {
   const labels = state.meta.moods;
   renderKpis(summary);
   renderTimeline(timeline, bucket);
-  renderTop("top-artists", artists);
+  renderTop("top-artists", artists, (r) => artistLink(r.name));
   renderTop("top-albums", albums);
   renderTop("top-tracks", tracks);
   renderShareArea("genres", genres, trend, (_, i) => PALETTE[i % PALETTE.length]);
@@ -257,11 +270,230 @@ async function load() {
   renderRecent(recent);
 }
 
+// --- artist page --------------------------------------------------------------
+
+const longDate = (t) => new Date(t * 1000).toLocaleDateString("da-DK", { day: "numeric", month: "long", year: "numeric" });
+const capital = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const WEEKDAY_NAMES = ["mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag"];
+
+async function loadArtist(name) {
+  let a;
+  try {
+    a = await api("artist", { name });
+  } catch {
+    $("#artist-hero").innerHTML = `<div><h2>${esc(name)}</h2><div class="sub">Ingen lytninger i den valgte periode – prøv en længere periode.</div></div>`;
+    for (const id of ["artist-kpis", "artist-tracks", "artist-albums"]) document.getElementById(id).innerHTML = "";
+    chart("artist-months").clear();
+    chart("artist-hours").clear();
+    return;
+  }
+  const labels = state.meta.moods;
+  const favDay = a.weekdays.indexOf(Math.max(...a.weekdays));
+  $("#artist-hero").innerHTML = `
+    ${cover(a.image_id, a.name, "cover")}
+    <div style="min-width:0">
+      ${a.rank ? `<div class="sub">#${a.rank} blandt dine kunstnere i perioden</div>` : ""}
+      <h2>${esc(a.name)}</h2>
+      ${a.first ? `<div class="sub">Første gang hørt ${longDate(a.first)}</div>` : ""}
+      <div class="chips">
+        ${a.genres.map((g) => `<span class="chip">${esc(g.name)}</span>`).join("")}
+        ${a.moods.map((m) => `<span class="chip"><span class="dot" style="background:${MOOD_COLORS[m.name] || "#94a3b8"}"></span>${esc(labels[m.name] || m.name)}</span>`).join("")}
+      </div>
+    </div>`;
+  const kpi = (l, v, d = "&nbsp;") => `<div class="kpi"><div class="label">${l}</div><div class="value">${v}</div><div class="delta">${d}</div></div>`;
+  $("#artist-kpis").innerHTML = [
+    kpi("Lytninger", fmt(a.plays), `${fmt(a.share * 100, 1)} % af al lytning`),
+    kpi("Lyttetid", `${fmt(a.minutes / 60, 1)} t`),
+    kpi("Sange", fmt(a.tracks), `fra ${fmt(a.albums)} albums`),
+    kpi("Dage", fmt(a.days), "med mindst én lytning"),
+    kpi("Yndlingsdag", capital(WEEKDAY_NAMES[favDay])),
+    kpi("Skip-rate", `${fmt(a.skip_rate * 100)} %`),
+    kpi("Sidst hørt", new Date(a.last * 1000).toLocaleDateString("da-DK", { day: "numeric", month: "short" })),
+  ].join("");
+
+  const months = baseOption();
+  months.legend.show = false;
+  months.xAxis.data = a.months.labels.map((l) => fmtLabel(l, "month"));
+  months.series = [{ type: "bar", name: "Lytninger", data: a.months.plays, itemStyle: { color: css("--accent"), borderRadius: [3, 3, 0, 0] } }];
+  chart("artist-months").setOption(months, true);
+
+  const hours = baseOption();
+  hours.legend.show = false;
+  hours.xAxis.data = [...Array(24).keys()].map((h) => String(h).padStart(2, "0"));
+  hours.series = [{ type: "bar", name: "Lytninger", data: a.hours, itemStyle: { color: "#14b8a6", borderRadius: [3, 3, 0, 0] } }];
+  chart("artist-hours").setOption(hours, true);
+
+  renderTop("artist-tracks", a.top_tracks);
+  renderTop("artist-albums", a.top_albums);
+}
+
+// --- wrapped ------------------------------------------------------------------
+
+async function loadWrapped() {
+  const p = new URLSearchParams();
+  if (state.year) p.set("year", state.year);
+  if (state.user) p.set("user", state.user);
+  const w = await (await fetch(`api/wrapped?${p}`)).json();
+  $("#wrapped-year").innerHTML = (w.years.length ? w.years : [w.year])
+    .map((y) => `<option value="${y}" ${y === w.year ? "selected" : ""}>${y}</option>`).join("");
+
+  const el = $("#view-wrapped");
+  if (!w.plays) {
+    el.innerHTML = `<section class="wr-hero"><div class="eyebrow">Wrapped ${w.year}</div><div class="lead" style="margin-top:12px">Ingen lytninger i ${w.year} endnu.</div></section>`;
+    return;
+  }
+  const day = (iso) => new Date(iso + "T00:00:00").toLocaleDateString("da-DK", { day: "numeric", month: "long" });
+  const list = (rows, linkFor) => `<ol class="wr-list">${rows.map((r, i) => `
+    <li><span class="n">${i + 1}</span>
+      <span>${linkFor ? `<a href="${esc(linkFor(r))}" style="color:inherit">${esc(r.name)}</a>` : esc(r.name)}${r.sub ? ` <span class="muted">· ${esc(r.sub)}</span>` : ""}</span>
+      <span class="s">${fmt(r.plays)} ×</span></li>`).join("")}</ol>`;
+  const fact = (eyebrow, headline, text) =>
+    `<section class="wr-card"><div class="eyebrow">${eyebrow}</div><div class="headline">${headline}</div><div class="text">${text}</div></section>`;
+
+  const star = w.top_artists[0];
+  const runnersUp = w.genres.slice(1, 4).map((g) => esc(g.name)).join(", ");
+  const facts = [
+    fact("Travleste dag", day(w.busiest_day.d), `${fmt(w.busiest_day.minutes)} minutter og ${fmt(w.busiest_day.n)} sange på én dag.`),
+    w.longest_session && fact("Længste session", `${fmt(w.longest_session.minutes)} min`,
+      `${fmt(w.longest_session.tracks)} sange i træk den ${longDate(w.longest_session.start)}.`),
+    w.on_repeat && fact("På repeat", esc(w.on_repeat.name), `${esc(w.on_repeat.artist || "")} – spillet ${w.on_repeat.n} gange den ${day(w.on_repeat.d)}.`),
+    fact("Årets første sang", esc(w.first_track.name), `${esc(w.first_track.artist || "")} – ${longDate(w.first_track.started_at)}.`),
+    fact("Nye opdagelser", w.new_artists === 1 ? "1 ny kunstner" : `${fmt(w.new_artists)} nye kunstnere`, `${fmt(w.discovery_rate * 100)} % af de sange, du hørte, var nye for dig.`),
+    w.genres[0] && fact("Årets genre", esc(w.genres[0].name), runnersUp ? `Efterfulgt af ${runnersUp}.` : ""),
+  ].filter(Boolean).join("");
+
+  el.innerHTML = `
+    <section class="wr-hero">
+      <div class="eyebrow">Dit ${w.year} i musik</div>
+      <div class="big">${fmt(w.minutes)}</div>
+      <div class="lead">minutter med musik. Det er ${fmt(w.minutes / 60)} timer, eller ${fmt(w.minutes / 1440, 1)} døgn, fordelt på ${fmt(w.plays)} lytninger af ${fmt(w.tracks)} forskellige sange.</div>
+    </section>
+    <div class="wr-row">
+      <section class="wr-card wr-persona"><div class="eyebrow">Din lyttertype</div><div class="headline">${esc(w.persona.title)}</div><div class="text">${esc(w.persona.text)}</div></section>
+      ${fact("Dit yndlingstidspunkt", `${capital(w.peak.weekday)} kl. ${String(w.peak.hour).padStart(2, "0")}`, "Her er der størst chance for at finde dig med musik i ørerne.")}
+    </div>
+    ${star ? `<section class="wr-card wr-star">${cover(star.image_id, star.name, "ph")}
+      <div><div class="eyebrow">Årets kunstner</div>
+        <div class="headline"><a href="${esc(artistLink(star.name))}" style="color:inherit;text-decoration:none">${esc(star.name)}</a></div>
+        <div class="text">${fmt(star.plays)} lytninger og ${fmt(star.minutes / 60, 1)} timer fordelt på ${fmt(star.days)} dage.</div></div>
+    </section>` : ""}
+    <div class="wr-row">
+      <section class="wr-card"><div class="eyebrow">Top kunstnere</div>${list(w.top_artists, (r) => artistLink(r.name))}</section>
+      <section class="wr-card"><div class="eyebrow">Top sange</div>${list(w.top_tracks)}</section>
+      <section class="wr-card"><div class="eyebrow">Top albums</div>${list(w.top_albums)}</section>
+    </div>
+    <div class="wr-row">${facts}</div>
+    <div class="grid two">
+      <section class="card"><div class="card-head"><h2>Måned for måned</h2><span class="hint">timer</span></div><div id="wr-months" class="chart"></div></section>
+      <section class="card"><div class="card-head"><h2>Årets humør</h2></div><div id="wr-moods" class="chart"></div></section>
+    </div>`;
+
+  const months = baseOption();
+  months.legend.show = false;
+  months.xAxis.data = w.months.labels.map((l) => fmtLabel(l, "month"));
+  months.tooltip.valueFormatter = (v) => `${fmt(v, 1)} t`;
+  months.series = [{
+    type: "bar", name: "Timer", data: w.months.minutes.map((m) => +(m / 60).toFixed(1)),
+    itemStyle: { borderRadius: [4, 4, 0, 0], color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: "#ec4899" }, { offset: 1, color: "#7c5cff" }]) },
+  }];
+  chart("wr-months").setOption(months, true);
+
+  chart("wr-moods").setOption({
+    tooltip: { trigger: "item", backgroundColor: css("--card"), borderColor: css("--line"), textStyle: { color: css("--text") } },
+    legend: { bottom: 0, textStyle: { color: css("--muted") }, itemWidth: 10, itemHeight: 10 },
+    series: [{
+      type: "pie", radius: ["45%", "72%"], center: ["50%", "45%"], itemStyle: { borderColor: css("--card"), borderWidth: 2 },
+      label: { color: css("--text"), formatter: "{d} %" },
+      data: w.moods.map((m) => ({ name: m.label, value: m.n, itemStyle: { color: MOOD_COLORS[m.name] } })),
+    }],
+  }, true);
+}
+
+// --- compare ------------------------------------------------------------------
+
+async function loadCompare() {
+  const c = await api("compare");
+  $("#compare-pairs").innerHTML = c.pairs.length ? c.pairs.map((p) => `
+    <section class="card match" style="margin-bottom:16px">
+      <div class="pct">${fmt(p.match * 100)} %</div>
+      <div style="flex:1;min-width:220px">
+        <h2>Musiksmag-match: ${esc(p.a)} og ${esc(p.b)}</h2>
+        <div class="meter"><div style="width:${p.match * 100}%"></div></div>
+        <div class="hint" style="margin-top:6px">${fmt(p.shared_count)} fælles kunstnere</div>
+        <div class="chips">${p.shared.map((s) => `<a class="chip" href="${esc(artistLink(s))}" style="color:inherit;text-decoration:none">${esc(s)}</a>`).join("")}</div>
+      </div>
+    </section>`).join("")
+    : `<section class="card empty">Sammenligningen kræver mindst to brugere med lytninger i perioden.</section>`;
+
+  const row = (dt, dd) => `<dt>${dt}</dt><dd>${dd}</dd>`;
+  $("#compare-people").innerHTML = c.people.map((p) => `
+    <section class="card person">
+      <h3>${esc(p.name)}</h3>
+      <dl>
+        ${row("Lytninger", fmt(p.plays))}
+        ${row("Lyttetid", `${fmt(p.minutes / 60, 1)} t`)}
+        ${row("Kunstnere", fmt(p.artists))}
+        ${row("Top kunstner", p.top_artist ? `<a href="${esc(artistLink(p.top_artist.name))}" style="color:inherit">${esc(p.top_artist.name)}</a>` : "–")}
+        ${row("Top sang", p.top_track ? esc(p.top_track.name) : "–")}
+        ${row("Top genre", esc(p.top_genre || "–"))}
+        ${row("Humør", esc(p.top_mood || "–"))}
+        ${row("Lytter mest", p.peak_hour != null ? `kl. ${String(p.peak_hour).padStart(2, "0")}` : "–")}
+        ${row("Skip-rate", `${fmt(p.skip_rate * 100)} %`)}
+      </dl>
+    </section>`).join("");
+
+  const bucket = state.range === "7" || state.range === "30" ? "week" : "month";
+  const series = await Promise.all(c.people.map((p) => api("timeline", { bucket, user: p.id })));
+  const opt = baseOption();
+  opt.xAxis.data = (series[0]?.labels || []).map((l) => fmtLabel(l, bucket));
+  opt.tooltip.valueFormatter = (v) => `${fmt(v, 1)} t`;
+  opt.series = c.people.map((p, i) => ({
+    name: p.name, type: "bar", data: series[i].minutes.map((m) => +(m / 60).toFixed(1)),
+    itemStyle: { color: PALETTE[i % PALETTE.length], borderRadius: [3, 3, 0, 0] },
+  }));
+  chart("compare-chart").setOption(opt, true);
+}
+
+// --- routing ------------------------------------------------------------------
+
+const VIEWS = ["dashboard", "artist", "wrapped", "compare"];
+
+function currentRoute() {
+  const [view, arg] = location.hash.replace(/^#\/?/, "").split("/");
+  return { view: VIEWS.includes(view) ? view : "dashboard", arg: arg ? decodeURIComponent(arg) : null };
+}
+
+function updateControls(view) {
+  const multiUser = (state.meta?.users.length || 0) > 1;
+  $("#range").hidden = view === "wrapped";
+  $("#wrapped-year").hidden = view !== "wrapped";
+  $("#user").hidden = view === "compare" || !multiUser;
+  document.querySelector('#nav a[data-view="compare"]').hidden = !multiUser;
+  $("#export").href = `api/export.csv?${rangeParams()}`;
+  document.querySelectorAll("#nav a").forEach((a) =>
+    a.classList.toggle("on", a.dataset.view === view || (view === "artist" && a.dataset.view === "dashboard")));
+}
+
+async function refresh() {
+  const { view, arg } = currentRoute();
+  VIEWS.forEach((v) => ($(`#view-${v}`).hidden = v !== view));
+  updateControls(view);
+  try {
+    if (view === "artist") await loadArtist(arg);
+    else if (view === "wrapped") await loadWrapped();
+    else if (view === "compare") await loadCompare();
+    else await loadDashboard();
+  } catch (e) {
+    console.error(e);
+  }
+  Object.values(charts).forEach((c) => c.resize());
+}
+
 document.querySelectorAll("#range button").forEach((b) => b.addEventListener("click", () => {
   document.querySelectorAll("#range button").forEach((x) => x.classList.toggle("on", x === b));
   state.range = b.dataset.range;
   state.bucket = null;
-  load();
+  refresh();
 }));
 document.querySelectorAll("#bucket button").forEach((b) => b.addEventListener("click", () => {
   state.bucket = b.dataset.bucket;
@@ -270,14 +502,17 @@ document.querySelectorAll("#bucket button").forEach((b) => b.addEventListener("c
     renderTimeline(t, state.bucket);
   });
 }));
-$("#user").addEventListener("change", (e) => { state.user = e.target.value; load(); });
+$("#user").addEventListener("change", (e) => { state.user = e.target.value; refresh(); });
+$("#wrapped-year").addEventListener("change", (e) => { state.year = e.target.value; refresh(); });
+window.addEventListener("hashchange", () => { window.scrollTo(0, 0); refresh(); });
 window.addEventListener("resize", () => Object.values(charts).forEach((c) => c.resize()));
-matchMedia("(prefers-color-scheme: dark)").addEventListener("change", load);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", refresh);
 
 (async () => {
   await loadMeta();
-  await load();
+  await refresh();
   renderNow();
   setInterval(renderNow, 10000);
-  setInterval(async () => { await loadMeta(); }, 60000);
+  setInterval(async () => { await loadMeta(); updateControls(currentRoute().view); }, 60000);
 })();
+

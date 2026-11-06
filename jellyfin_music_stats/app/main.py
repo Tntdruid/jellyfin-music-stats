@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -11,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 import db
 import stats
+import views
 from collector import Collector
 from config import load_settings
 from enrich import Enricher
@@ -116,6 +118,33 @@ def recent(start: Optional[int] = None, end: Optional[int] = None, user: Optiona
 @app.get("/api/insights")
 def insights(start: Optional[int] = None, end: Optional[int] = None, user: Optional[str] = None):
     return stats.insights(scope(start, end, user))
+
+
+@app.get("/api/artist")
+def artist(name: str, start: Optional[int] = None, end: Optional[int] = None, user: Optional[str] = None):
+    data = views.artist(scope(start, end, user), name)
+    if not data:
+        raise HTTPException(404, "Ingen lytninger for denne kunstner i perioden")
+    return data
+
+
+@app.get("/api/wrapped")
+def wrapped(year: Optional[int] = None, user: Optional[str] = None):
+    years = views.wrapped_years()
+    year = year or (years[0] if years else datetime.now().year)
+    return {"years": years, **views.wrapped(year, user or None)}
+
+
+@app.get("/api/compare")
+def compare(start: Optional[int] = None, end: Optional[int] = None):
+    return views.compare(scope(start, end, None))
+
+
+@app.get("/api/export.csv")
+def export(start: Optional[int] = None, end: Optional[int] = None, user: Optional[str] = None):
+    filename = f"musikstatistik-{datetime.now():%Y-%m-%d}.csv"
+    return Response(views.export_csv(scope(start, end, user)), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 
 @app.get("/api/image/{item_id}")

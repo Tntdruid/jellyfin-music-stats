@@ -12,6 +12,11 @@
       <h1>Musikstatistik</h1>
       <span id="status" class="status" title="">●</span>
     </div>
+    <nav class="seg" id="nav">
+      <a href="#/" data-view="dashboard">Oversigt</a>
+      <a href="#/wrapped" data-view="wrapped">Wrapped</a>
+      <a href="#/compare" data-view="compare">Sammenlign</a>
+    </nav>
     <div class="controls">
       <div class="seg" id="range">
         <button data-range="7">7 dage</button>
@@ -20,12 +25,41 @@
         <button data-range="year">I år</button>
         <button data-range="all">Alt</button>
       </div>
+      <select id="wrapped-year" hidden></select>
       <select id="user"><option value="">Alle brugere</option></select>
+      <a id="export" class="btn" href="api/export.csv" download title="Hent afspilningerne i perioden som CSV">↓ CSV</a>
     </div>
   </header>
 
   <main>
-    <section id="now" class="now" hidden></section>
+   <section id="now" class="now" hidden></section>
+
+   <div id="view-artist" class="view" hidden>
+    <a href="#/" class="back">← Oversigt</a>
+    <section class="artist-hero" id="artist-hero"></section>
+    <section class="kpis" id="artist-kpis"></section>
+    <div class="grid two">
+      <section class="card"><div class="card-head"><h2>Lytninger pr. måned</h2></div><div id="artist-months" class="chart"></div></section>
+      <section class="card"><div class="card-head"><h2>Hvornår hører du dem?</h2></div><div id="artist-hours" class="chart"></div></section>
+    </div>
+    <div class="grid two">
+      <section class="card"><div class="card-head"><h2>Top sange</h2></div><ol id="artist-tracks" class="top"></ol></section>
+      <section class="card"><div class="card-head"><h2>Albums</h2></div><ol id="artist-albums" class="top"></ol></section>
+    </div>
+   </div>
+
+   <div id="view-wrapped" class="view" hidden></div>
+
+   <div id="view-compare" class="view" hidden>
+    <div id="compare-pairs"></div>
+    <div id="compare-people" class="grid people"></div>
+    <section class="card">
+      <div class="card-head"><h2>Lyttetid over tid</h2><span class="hint">timer</span></div>
+      <div id="compare-chart" class="chart"></div>
+    </section>
+   </div>
+
+   <div id="view-dashboard" class="view">
 
     <section class="kpis" id="kpis"></section>
 
@@ -79,6 +113,7 @@
       <div class="card-head"><h2>Seneste afspilninger</h2></div>
       <table class="recent"><tbody id="recent"></tbody></table>
     </section>
+   </div>
   </main>
 
   <script src="static/echarts.min.js"></script>

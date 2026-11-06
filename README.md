@@ -8,6 +8,10 @@ Home Assistant-add-on med lyttestatistik for musik i Jellyfin. Det er tænkt som
 - Heatmap over, hvornår du lytter
 - Smartere tal: skip-rate, lyttesessioner, streaks, nye kunstnere, gentagelser og automatiske indsigter
 - Live "spiller nu"
+- Kunstnersider med historik, top-sange, albums og tidspunkter på døgnet
+- Wrapped: årsoversigt med lyttertype, årets kunstner, top 5-lister og sjove fakta
+- Sammenligning af brugere med musiksmag-match og fælles kunstnere
+- Eksport af afspilninger til CSV (åbner direkte i dansk Excel)
 - Understøtter flere brugere
 
 Se [jellyfin_music_stats/DOCS.md](jellyfin_music_stats/DOCS.md) for opsætning.
