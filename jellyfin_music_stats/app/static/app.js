@@ -242,11 +242,13 @@ function renderStatus(meta) {
 async function loadMeta() {
   state.meta = await (await fetch("api/meta")).json();
   renderStatus(state.meta);
+  const me = state.meta.me?.jellyfin_user;
+  // first load: start on the viewer's own stats when their HA user matches a Jellyfin user
+  if (state.user === "" && me && !state.userChosen) state.user = me;
   const sel = $("#user");
-  const current = sel.value;
   sel.innerHTML = `<option value="">Alle brugere</option>` +
-    state.meta.users.map((u) => `<option value="${esc(u.id)}">${esc(u.name || u.id)}</option>`).join("");
-  sel.value = current;
+    state.meta.users.map((u) => `<option value="${esc(u.id)}">${esc(u.name || u.id)}${u.id === me ? " (dig)" : ""}</option>`).join("");
+  sel.value = state.user;
 }
 
 async function loadDashboard() {
@@ -527,7 +529,7 @@ document.querySelectorAll("#bucket button").forEach((b) => b.addEventListener("c
     renderTimeline(t, state.bucket);
   });
 }));
-$("#user").addEventListener("change", (e) => { state.user = e.target.value; refresh(); });
+$("#user").addEventListener("change", (e) => { state.user = e.target.value; state.userChosen = true; refresh(); });
 $("#wrapped-year").addEventListener("change", (e) => { state.year = e.target.value; refresh(); });
 window.addEventListener("hashchange", () => { window.scrollTo(0, 0); refresh(); });
 window.addEventListener("resize", () => Object.values(charts).forEach((c) => c.resize()));

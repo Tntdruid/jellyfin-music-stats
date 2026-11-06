@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Query, Response
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -54,11 +54,29 @@ def scope(start: Optional[int], end: Optional[int], user: Optional[str]) -> stat
     return stats.Scope(start or 0, end or int(time.time()) + 60, user or None)
 
 
+def current_user(request: Request, users: list) -> dict:
+    """Match the Home Assistant user behind the ingress request to a Jellyfin user.
+
+    HA's ingress proxy adds X-Remote-User-Name / -Display-Name; the user_map option covers
+    people whose HA and Jellyfin names differ.
+    """
+    ha_names = [request.headers.get(h, "").strip().lower()
+                for h in ("X-Remote-User-Name", "X-Remote-User-Display-Name")]
+    ha_names = [n for n in ha_names if n]
+    wanted = [settings.user_map[n] for n in ha_names if n in settings.user_map] + ha_names
+    by_name = {(u["name"] or "").lower(): u["id"] for u in users}
+    match = next((by_name[n] for n in wanted if n in by_name), None)
+    return {"ha_user": request.headers.get("X-Remote-User-Display-Name") or request.headers.get("X-Remote-User-Name"),
+            "jellyfin_user": match}
+
+
 @app.get("/api/meta")
-def meta():
+def meta(request: Request):
     c = state["collector"]
+    users = stats.users()
     return {
-        "users": stats.users(),
+        "users": users,
+        "me": current_user(request, users),
         "first_play": stats.first_play(),
         "moods": stats.mood_labels(),
         "collector": {

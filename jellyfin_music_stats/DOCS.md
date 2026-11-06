@@ -21,6 +21,15 @@ Jellyfin-add-on'et kører på samme maskine, så det er nok at bruge Home Assist
 | `poll_interval` | Antal sekunder mellem hvert tjek af, hvad der spilles (3–60). |
 | `min_play_percent` | Hvor stor en del af et nummer der skal høres, før det tæller som en lytning. Fire minutter tæller altid, som hos Last.fm. Kortere afspilninger registreres som skips. |
 | `lastfm_api_key` | Valgfri. Henter humør-tags fra Last.fm for numre, der ikke har nogen. Du kan få en gratis nøgle på https://www.last.fm/api/account/create |
+| `user_map` | Valgfri. Kobler Home Assistant-brugere til Jellyfin-brugere, når navnene er forskellige. Én linje pr. bruger, fx `christian=Tntdruid`. |
+
+## Flere brugere
+
+Når du åbner Musikstatistik, viser siden automatisk **din egen** statistik. Det sker, hvis dit brugernavn eller visningsnavn i Home Assistant er det samme som dit brugernavn i Jellyfin (store og små bogstaver er ligegyldige). I brugermenuen står der "(dig)" ved dig, og du kan altid skifte til "Alle brugere", en anden bruger eller fanen Sammenlign.
+
+Hvis navnene er forskellige, kobler du dem under `user_map`. Den del, der står før `=`, er HA-brugernavnet, og den del, der står efter, er Jellyfin-brugernavnet.
+
+En Jellyfin-bruger kommer først med i statistikken efter sin første afspilning.
 
 ## Humør
 

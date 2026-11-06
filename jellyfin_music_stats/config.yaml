@@ -1,5 +1,5 @@
 name: Jellyfin Music Stats
-version: "0.4.0"
+version: "0.5.0"
 slug: jellyfin_music_stats
 description: Lyttestatistik for musik i Jellyfin – top-lister, genrer, heatmap og humør
 url: https://github.com/Tntdruid/jellyfin-music-stats
@@ -21,9 +21,12 @@ options:
   poll_interval: 10
   min_play_percent: 50
   lastfm_api_key: ""
+  user_map: []
 schema:
   jellyfin_url: url
   api_key: password
   poll_interval: int(3,60)
   min_play_percent: int(10,100)
   lastfm_api_key: password?
+  user_map:
+    - str

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0
+
+- Hver bruger ser automatisk sin egen statistik: HA-brugeren matches med Jellyfin-brugeren med samme navn
+- Ny indstilling `user_map` til at koble brugere, hvis navnene er forskellige, fx `christian=Tntdruid`
+- Brugermenuen viser "(dig)" ved din egen bruger
+- Indstillingerne har nu danske og engelske beskrivelser i Home Assistant
+
 ## 0.4.0
 
 - Databasen ligger nu i add-on'ets offentlige config-mappe (`addon_configs/…_jellyfin_music_stats/music_stats.db`), så du kan se og kopiere den via Samba
