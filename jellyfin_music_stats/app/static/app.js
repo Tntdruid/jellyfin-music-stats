@@ -199,7 +199,7 @@ async function renderNow() {
     el.hidden = !now.length;
     el.innerHTML = now.map((n) => `
       <div class="item">
-        <div class="img">♪</div>
+        ${n.album_id ? `<img class="img" src="api/image/${esc(n.album_id)}" alt="" onerror="this.outerHTML='<div class=img>♪</div>'">` : `<div class="img">♪</div>`}
         <div style="flex:1;min-width:0">
           <div class="live">${n.paused ? "PAUSE" : "SPILLER NU"} · ${esc(n.user_name || "")}</div>
           <div><strong>${esc(n.name)}</strong> <span class="muted">· ${esc((n.artists || [])[0] || "")}</span></div>

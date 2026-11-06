@@ -38,6 +38,7 @@ class ActivePlay:
     position: float = 0.0
     paused: bool = False
     listened: float = 0.0
+    album_id: Optional[str] = None
 
 
 def describe_error(e: Exception) -> str:
@@ -111,6 +112,7 @@ class Collector:
                 device=s.get("DeviceName"),
                 name=track["name"],
                 artists=track["artists"],
+                album_id=track["album_id"],
                 duration=track["duration"],
                 started_at=now - min(position, self.settings.poll_interval),
                 last_seen=now,
@@ -176,6 +178,7 @@ class Collector:
                 "item_id": p.item_id,
                 "name": p.name,
                 "artists": p.artists,
+                "album_id": p.album_id,
                 "user_name": p.user_name,
                 "device": p.device,
                 "position": p.position,
