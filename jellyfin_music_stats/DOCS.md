@@ -1,0 +1,36 @@
+# Jellyfin Music Stats
+
+Add-on'et følger med i, hvad der bliver spillet på din Jellyfin-server, og viser statistik over din musiklytning.
+
+## Opsætning
+
+1. Opret en API-nøgle i Jellyfin under **Kontrolpanel → API-nøgler → +**.
+2. Sæt `jellyfin_url` og `api_key` under add-on'ets **Konfiguration** og start add-on'et.
+3. Åbn **Musikstatistik** i sidemenuen.
+
+Prikken ved titlen viser forbindelsen: grøn betyder forbundet, rød betyder fejl (hold musen over den for at se detaljer), og grå betyder, at opsamlingen ikke er sat op.
+
+### Jellyfin URL
+
+Jellyfin-add-on'et kører på samme maskine, så det er nok at bruge Home Assistants IP-adresse med port 8096, fx `http://192.168.1.10:8096`. Du kan også bruge add-on'ets interne værtsnavn, som står på Jellyfin-add-on'ets infoside under *Hostname*, fx `http://xxxxxxxx-jellyfin:8096`.
+
+## Indstillinger
+
+| Indstilling | Betydning |
+|---|---|
+| `poll_interval` | Antal sekunder mellem hvert tjek af, hvad der spilles (3–60). |
+| `min_play_percent` | Hvor stor en del af et nummer der skal høres, før det tæller som en lytning. Fire minutter tæller altid, som hos Last.fm. Kortere afspilninger registreres som skips. |
+| `lastfm_api_key` | Valgfri. Henter humør-tags fra Last.fm for numre, der ikke har nogen. Du kan få en gratis nøgle på https://www.last.fm/api/account/create |
+
+## Humør
+
+Hvert nummer får op til tre humørkategorier: energisk, glad, rolig, melankolsk, mørk, romantisk, aggressiv eller festlig. Kilderne bruges i denne rækkefølge:
+
+1. Tags på nummeret i Jellyfin, fx mood-tags skrevet med MusicBrainz Picard
+2. Last.fm-tags for nummeret, og derefter for kunstneren (kræver `lastfm_api_key`)
+3. Et groft gæt ud fra genren
+
+## Bemærk
+
+- Jellyfin gemmer ikke selv en lyttehistorik, så statistikken starter først, når add-on'et kører.
+- Data gemmes i `/data/music_stats.db` (SQLite) og kommer med i Home Assistants backups.

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Musikstatistik</title>
+  <link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1>Musikstatistik</h1>
+      <span id="status" class="status" title="">●</span>
+    </div>
+    <div class="controls">
+      <div class="seg" id="range">
+        <button data-range="7">7 dage</button>
+        <button data-range="30" class="on">30 dage</button>
+        <button data-range="90">90 dage</button>
+        <button data-range="year">I år</button>
+        <button data-range="all">Alt</button>
+      </div>
+      <select id="user"><option value="">Alle brugere</option></select>
+    </div>
+  </header>
+
+  <main>
+    <section id="now" class="now" hidden></section>
+
+    <section class="kpis" id="kpis"></section>
+
+    <div class="grid two">
+      <section class="card">
+        <div class="card-head">
+          <h2>Lytninger over tid</h2>
+          <div class="seg small" id="bucket">
+            <button data-bucket="day">Dag</button>
+            <button data-bucket="week">Uge</button>
+            <button data-bucket="month">Måned</button>
+          </div>
+        </div>
+        <div id="timeline" class="chart"></div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h2>Indsigt</h2></div>
+        <ul id="insights" class="insights"></ul>
+      </section>
+    </div>
+
+    <div class="grid three">
+      <section class="card"><div class="card-head"><h2>Top kunstnere</h2></div><ol id="top-artists" class="top"></ol></section>
+      <section class="card"><div class="card-head"><h2>Top albums</h2></div><ol id="top-albums" class="top"></ol></section>
+      <section class="card"><div class="card-head"><h2>Top sange</h2></div><ol id="top-tracks" class="top"></ol></section>
+    </div>
+
+    <div class="grid two">
+      <section class="card">
+        <div class="card-head"><h2>Genrer over tid</h2><span class="hint">andel af lytninger</span></div>
+        <div id="genres" class="chart"></div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h2>Hvornår lytter du?</h2></div>
+        <div id="heatmap" class="chart"></div>
+      </section>
+    </div>
+
+    <div class="grid two">
+      <section class="card">
+        <div class="card-head"><h2>Musikhumør over tid</h2><span class="hint" id="mood-coverage"></span></div>
+        <div id="moods" class="chart"></div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h2>Humør i løbet af døgnet</h2></div>
+        <div id="mood-hours" class="chart"></div>
+      </section>
+    </div>
+
+    <section class="card">
+      <div class="card-head"><h2>Seneste afspilninger</h2></div>
+      <table class="recent"><tbody id="recent"></tbody></table>
+    </section>
+  </main>
+
+  <script src="static/echarts.min.js"></script>
+  <script src="static/app.js"></script>
+</body>
+</html>

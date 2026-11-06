@@ -1,0 +1,27 @@
+name: Jellyfin Music Stats
+version: "0.1.0"
+slug: jellyfin_music_stats
+description: Lyttestatistik for musik i Jellyfin – top-lister, genrer, heatmap og humør
+url: https://github.com/Tntdruid/jellyfin-music-stats
+arch:
+  - amd64
+  - aarch64
+init: false
+startup: application
+boot: auto
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:music-box-multiple
+panel_title: Musikstatistik
+options:
+  jellyfin_url: "http://homeassistant.local:8096"
+  api_key: ""
+  poll_interval: 10
+  min_play_percent: 50
+  lastfm_api_key: ""
+schema:
+  jellyfin_url: url
+  api_key: password
+  poll_interval: int(3,60)
+  min_play_percent: int(10,100)
+  lastfm_api_key: password?
