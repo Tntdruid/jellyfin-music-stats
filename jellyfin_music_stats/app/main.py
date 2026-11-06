@@ -76,6 +76,13 @@ def now_playing():
     return c.now_playing() if c else []
 
 
+@app.get("/api/latest")
+def latest():
+    """Cheap change marker; the page polls it and reloads its data when it moves."""
+    row = db.query("SELECT MAX(id) AS play, (SELECT COUNT(*) FROM tracks WHERE moods IS NOT NULL) AS enriched FROM plays")[0]
+    return {"marker": f"{row['play']}-{row['enriched']}"}
+
+
 @app.get("/api/summary")
 def summary(start: Optional[int] = None, end: Optional[int] = None, user: Optional[str] = None):
     return stats.summary(scope(start, end, user))

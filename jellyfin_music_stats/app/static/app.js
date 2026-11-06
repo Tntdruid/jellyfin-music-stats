@@ -48,6 +48,7 @@ function chart(id) {
 function baseOption() {
   const text = css("--muted"), line = css("--line");
   return {
+    animation: !state.quiet,  // no replayed animations on background refreshes
     textStyle: { color: text, fontFamily: "inherit" },
     grid: { left: 40, right: 12, top: 30, bottom: 30, containLabel: false },
     tooltip: { trigger: "axis", backgroundColor: css("--card"), borderColor: line, textStyle: { color: css("--text") } },
@@ -157,6 +158,7 @@ function renderShareArea(id, data, bucket, colorFor) {
 function renderHeatmap(cells) {
   const max = Math.max(1, ...cells.map((c) => c[2]));
   chart("heatmap").setOption({
+    animation: !state.quiet,
     textStyle: { color: css("--muted") },
     tooltip: { formatter: (p) => `${DAYS[p.value[1]]} kl. ${String(p.value[0]).padStart(2, "0")}: ${p.value[2]} lytninger`,
                backgroundColor: css("--card"), borderColor: css("--line"), textStyle: { color: css("--text") } },
@@ -419,6 +421,7 @@ async function loadWrapped() {
   chart("wr-months").setOption(months, true);
 
   chart("wr-moods").setOption({
+    animation: !state.quiet,
     tooltip: { trigger: "item", backgroundColor: css("--card"), borderColor: css("--line"), textStyle: { color: css("--text") } },
     legend: { bottom: 0, textStyle: { color: css("--muted") }, itemWidth: 10, itemHeight: 10 },
     series: [{
@@ -530,11 +533,31 @@ window.addEventListener("hashchange", () => { window.scrollTo(0, 0); refresh(); 
 window.addEventListener("resize", () => Object.values(charts).forEach((c) => c.resize()));
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", refresh);
 
+// Reload the visible view when a play has been recorded (or moods were tagged) since last look.
+// While the tab is hidden the marker is left alone, so it catches up as soon as it is shown again.
+async function checkForNewData() {
+  try {
+    const { marker } = await (await fetch("api/latest")).json();
+    if (document.hidden || marker === state.marker) return;
+    const first = state.marker === undefined;
+    state.marker = marker;
+    if (first) return;
+    state.quiet = true;
+    await loadMeta();
+    await refresh();
+  } catch { /* try again next tick */ } finally {
+    state.quiet = false;
+  }
+}
+
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { renderNow(); checkForNewData(); } });
+
 (async () => {
   await loadMeta();
   await refresh();
   renderNow();
-  setInterval(renderNow, 10000);
+  checkForNewData();
+  setInterval(() => { renderNow(); checkForNewData(); }, 10000);
   setInterval(async () => { await loadMeta(); updateControls(currentRoute().view); }, 60000);
 })();
 

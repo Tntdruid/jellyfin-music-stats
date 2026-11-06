@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1
+
+- Siden opdaterer sig selv, når en ny afspilning er gemt; det er ikke længere nødvendigt at genindlæse
+- Opdateringen sker i baggrunden uden at hoppe til toppen eller afspille grafernes animationer igen
+
 ## 0.3.0
 
 - Albums og sange har nu deres egne sider, ligesom kunstnere
