@@ -207,16 +207,16 @@ def timeline(scope: Scope, bucket: str) -> dict:
 def top(scope: Scope, kind: str, limit: int) -> list:
     cte, params = _plays_cte(scope)
     if kind == "artists":
-        sql = f"""{cte} SELECT a.value AS name, NULL AS sub, COUNT(*) AS plays, SUM(listened)/60.0 AS minutes,
+        sql = f"""{cte} SELECT a.value AS key, a.value AS name, NULL AS sub, COUNT(*) AS plays, SUM(listened)/60.0 AS minutes,
                          MAX(p.album_id) AS image_id, COUNT(DISTINCT date(started_at,{LOCAL})) AS days
                   FROM p, json_each(p.artists) a GROUP BY a.value"""
     elif kind == "albums":
-        sql = f"""{cte} SELECT MAX(album) AS name, MAX(album_artist) AS sub, COUNT(*) AS plays,
+        sql = f"""{cte} SELECT album_id AS key, MAX(album) AS name, MAX(album_artist) AS sub, COUNT(*) AS plays,
                          SUM(listened)/60.0 AS minutes, album_id AS image_id,
                          COUNT(DISTINCT date(started_at,{LOCAL})) AS days
                   FROM p WHERE album_id IS NOT NULL GROUP BY album_id"""
     else:
-        sql = f"""{cte} SELECT MAX(name) AS name, MAX(json_extract(artists,'$[0]')) AS sub, COUNT(*) AS plays,
+        sql = f"""{cte} SELECT item_id AS key, MAX(name) AS name, MAX(json_extract(artists,'$[0]')) AS sub, COUNT(*) AS plays,
                          SUM(listened)/60.0 AS minutes, COALESCE(MAX(album_id), item_id) AS image_id,
                          COUNT(DISTINCT date(started_at,{LOCAL})) AS days
                   FROM p GROUP BY item_id"""

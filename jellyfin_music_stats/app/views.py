@@ -11,15 +11,20 @@ import db
 import stats
 from stats import LOCAL, MOOD_DA, WEEKDAYS, Scope
 
-ARTIST_FILTER = "EXISTS (SELECT 1 FROM json_each(p.artists) a WHERE a.value = ?)"
+# {t} is the alias that carries the track columns (artists, album_id, item_id)
+FILTERS = {
+    "artist": "EXISTS (SELECT 1 FROM json_each({t}.artists) a WHERE a.value = ?)",
+    "album": "{t}.album_id = ?",
+    "track": "{t}.item_id = ?",
+}
 
 
-# --- artist ----------------------------------------------------------------
+# --- artist / album / track pages -----------------------------------------
 
-def artist(scope: Scope, name: str) -> Optional[dict]:
+def detail(scope: Scope, kind: str, key: str) -> Optional[dict]:
     cte, params = stats._plays_cte(scope)
-    base = f"{cte}, ap AS (SELECT * FROM p WHERE {ARTIST_FILTER})"
-    params = [*params, name]
+    base = f"{cte}, ap AS (SELECT * FROM p WHERE {FILTERS[kind].format(t='p')})"
+    params = [*params, key]
 
     totals = db.query(
         f"""{base} SELECT COUNT(*) AS plays, COALESCE(SUM(listened),0)/60.0 AS minutes,
@@ -34,30 +39,29 @@ def artist(scope: Scope, name: str) -> Optional[dict]:
     user_sql, user_params = ("AND p.user_id = ?", [scope.user]) if scope.user else ("", [])
     first = db.query(
         f"""SELECT MIN(p.started_at) AS t FROM plays p JOIN tracks t USING(item_id)
-            WHERE p.counted = 1 {user_sql}
-              AND EXISTS (SELECT 1 FROM json_each(t.artists) a WHERE a.value = ?)""",
-        [*user_params, name],
+            WHERE p.counted = 1 {user_sql} AND {FILTERS[kind].format(t='t')}""",
+        [*user_params, key],
     )[0]["t"]
 
-    ranking = stats.top(scope, "artists", 1000)
-    rank = next((i + 1 for i, r in enumerate(ranking) if r["name"] == name), None)
-    all_plays = sum(r["plays"] for r in ranking) or 1  # counts multi-artist tracks once per artist
+    ranking = stats.top(scope, kind + "s", 1000)
+    rank = next((i + 1 for i, r in enumerate(ranking) if r["key"] == key), None)
+    all_plays = stats._totals(scope)["plays"] or 1
 
     where, wparams = scope.where(counted=None, alias="p")
     skip = db.query(
         f"""SELECT 1.0 - AVG(p.counted) AS rate FROM plays p JOIN tracks t USING(item_id)
-            WHERE {where} AND EXISTS (SELECT 1 FROM json_each(t.artists) a WHERE a.value = ?)""",
-        [*wparams, name],
+            WHERE {where} AND {FILTERS[kind].format(t='t')}""",
+        [*wparams, key],
     )[0]["rate"] or 0
 
     top_tracks = db.query(
-        f"""{base} SELECT MAX(name) AS name, MAX(album) AS sub, COUNT(*) AS plays, SUM(listened)/60.0 AS minutes,
-                  COALESCE(MAX(album_id), item_id) AS image_id
-            FROM ap GROUP BY item_id ORDER BY plays DESC LIMIT 10""",
+        f"""{base} SELECT item_id AS key, MAX(name) AS name, MAX(album) AS sub, COUNT(*) AS plays,
+                  SUM(listened)/60.0 AS minutes, COALESCE(MAX(album_id), item_id) AS image_id
+            FROM ap GROUP BY item_id ORDER BY plays DESC LIMIT 15""",
         params,
     )
     top_albums = db.query(
-        f"""{base} SELECT MAX(ap.album) AS name, MAX(t.year) AS sub, COUNT(*) AS plays,
+        f"""{base} SELECT ap.album_id AS key, MAX(ap.album) AS name, MAX(t.year) AS sub, COUNT(*) AS plays,
                   SUM(ap.listened)/60.0 AS minutes, ap.album_id AS image_id
             FROM ap JOIN tracks t ON t.item_id = ap.item_id WHERE ap.album_id IS NOT NULL
             GROUP BY ap.album_id ORDER BY plays DESC LIMIT 10""",
@@ -87,21 +91,66 @@ def artist(scope: Scope, name: str) -> Optional[dict]:
     hour_counts = {r["h"]: r["n"] for r in hours}
     day_counts = {r["d"]: r["n"] for r in weekdays}
     return {
-        "name": name,
+        "kind": kind,
+        "key": key,
+        **_header(kind, key),
         **totals,
         "first": first,
         "rank": rank,
         "share": totals["plays"] / all_plays,
         "skip_rate": skip,
-        "image_id": top_albums[0]["image_id"] if top_albums else None,
-        "top_tracks": top_tracks,
-        "top_albums": top_albums,
+        "top_tracks": top_tracks if kind != "track" else _played_next(scope, key),
+        "top_albums": top_albums if kind == "artist" else [],
         "months": {"labels": labels, "plays": [month_map.get(l, 0) for l in labels]},
         "hours": [hour_counts.get(h, 0) for h in range(24)],
         "weekdays": [day_counts.get(d, 0) for d in range(7)],
         "genres": sorted(({"name": t["k"], "n": t["n"]} for t in tags if t["kind"] == "genre"), key=lambda x: -x["n"])[:6],
         "moods": sorted(({"name": t["k"], "n": t["n"]} for t in tags if t["kind"] == "mood"), key=lambda x: -x["n"]),
     }
+
+
+def _header(kind: str, key: str) -> dict:
+    """Title, cover and links shown at the top of the page."""
+    if kind == "artist":
+        row = db.query(
+            """SELECT t.album_id FROM plays p JOIN tracks t USING(item_id)
+               WHERE EXISTS (SELECT 1 FROM json_each(t.artists) a WHERE a.value = ?)
+               GROUP BY t.album_id ORDER BY COUNT(*) DESC LIMIT 1""",
+            [key],
+        )
+        return {"name": key, "image_id": row[0]["album_id"] if row else None, "artists": [], "album": None}
+    col = "album_id" if kind == "album" else "item_id"
+    rows = db.query(f"SELECT * FROM tracks WHERE {col} = ? LIMIT 1", [key])
+    if not rows:
+        return {"name": key, "image_id": None, "artists": [], "album": None}
+    t = rows[0]
+    artists = [t["album_artist"]] if kind == "album" and t["album_artist"] else json.loads(t["artists"])
+    return {
+        "name": t["album"] if kind == "album" else t["name"],
+        "image_id": t["album_id"] or t["item_id"],
+        "artists": artists,
+        "album": {"id": t["album_id"], "name": t["album"]} if kind == "track" and t["album_id"] else None,
+        "year": t["year"],
+        "duration": t["duration"],
+    }
+
+
+def _played_next(scope: Scope, item_id: str, max_gap: int = 600) -> list:
+    """Tracks most often played right after this one, within the same listening session."""
+    where, params = scope.where(counted=True, alias="plays")
+    return db.query(
+        f"""WITH seq AS (
+              SELECT item_id, ended_at,
+                     LEAD(item_id) OVER w AS next_id, LEAD(started_at) OVER w AS next_start
+              FROM plays WHERE {where}
+              WINDOW w AS (PARTITION BY user_id ORDER BY started_at))
+            SELECT s.next_id AS key, t.name, json_extract(t.artists,'$[0]') AS sub, COUNT(*) AS plays,
+                   NULL AS minutes, COALESCE(t.album_id, s.next_id) AS image_id
+            FROM seq s JOIN tracks t ON t.item_id = s.next_id
+            WHERE s.item_id = ? AND s.next_id <> s.item_id AND s.next_start - s.ended_at < ?
+            GROUP BY s.next_id ORDER BY plays DESC LIMIT 10""",
+        [*params, item_id, max_gap],
+    )
 
 
 # --- wrapped ---------------------------------------------------------------

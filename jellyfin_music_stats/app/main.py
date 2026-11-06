@@ -120,11 +120,12 @@ def insights(start: Optional[int] = None, end: Optional[int] = None, user: Optio
     return stats.insights(scope(start, end, user))
 
 
-@app.get("/api/artist")
-def artist(name: str, start: Optional[int] = None, end: Optional[int] = None, user: Optional[str] = None):
-    data = views.artist(scope(start, end, user), name)
+@app.get("/api/detail")
+def detail(key: str, kind: str = Query(pattern="^(artist|album|track)$"),
+           start: Optional[int] = None, end: Optional[int] = None, user: Optional[str] = None):
+    data = views.detail(scope(start, end, user), kind, key)
     if not data:
-        raise HTTPException(404, "Ingen lytninger for denne kunstner i perioden")
+        raise HTTPException(404, "Ingen lytninger i perioden")
     return data
 
 

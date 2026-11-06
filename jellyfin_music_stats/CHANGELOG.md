@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+
+- Albums og sange har nu deres egne sider, ligesom kunstnere
+- Sangsider viser "Ofte hørt lige efter": de numre du typisk spiller efter sangen
+- Links fra top-lister, seneste afspilninger, Wrapped og mellem kunstner-, album- og sangsider
+- "Tilbage" går til den forrige side i stedet for altid til oversigten
+
 ## 0.2.0
 
 - Kunstnersider: klik på en kunstner for at se historik, top-sange, albums, genrer, humør og hvornår på døgnet du hører dem

@@ -35,16 +35,16 @@
    <section id="now" class="now" hidden></section>
 
    <div id="view-artist" class="view" hidden>
-    <a href="#/" class="back">← Oversigt</a>
+    <a href="#/" class="back" onclick="if (history.length > 1) { history.back(); return false; }">← Tilbage</a>
     <section class="artist-hero" id="artist-hero"></section>
     <section class="kpis" id="artist-kpis"></section>
     <div class="grid two">
       <section class="card"><div class="card-head"><h2>Lytninger pr. måned</h2></div><div id="artist-months" class="chart"></div></section>
-      <section class="card"><div class="card-head"><h2>Hvornår hører du dem?</h2></div><div id="artist-hours" class="chart"></div></section>
+      <section class="card"><div class="card-head"><h2>Hvornår på døgnet?</h2></div><div id="artist-hours" class="chart"></div></section>
     </div>
     <div class="grid two">
-      <section class="card"><div class="card-head"><h2>Top sange</h2></div><ol id="artist-tracks" class="top"></ol></section>
-      <section class="card"><div class="card-head"><h2>Albums</h2></div><ol id="artist-albums" class="top"></ol></section>
+      <section class="card"><div class="card-head"><h2 id="artist-tracks-title">Top sange</h2><span class="hint" id="artist-tracks-hint"></span></div><ol id="artist-tracks" class="top"></ol></section>
+      <section class="card" id="artist-albums-card"><div class="card-head"><h2>Albums</h2></div><ol id="artist-albums" class="top"></ol></section>
     </div>
    </div>
 

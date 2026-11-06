@@ -111,6 +111,8 @@ function cover(imageId, name, cls = "img") {
 }
 
 const artistLink = (name) => `#/artist/${encodeURIComponent(name)}`;
+const albumLink = (id) => `#/album/${encodeURIComponent(id)}`;
+const trackLink = (id) => `#/track/${encodeURIComponent(id)}`;
 
 function renderTop(id, rows, linkFor = null) {
   const el = document.getElementById(id);
@@ -127,7 +129,7 @@ function renderTop(id, rows, linkFor = null) {
           ${r.sub ? `<div class="sub">${esc(r.sub)}</div>` : ""}
           <div class="bar" style="width:${(r.plays / max) * 100}%"></div>
         </div>
-        <div class="count">${fmt(r.plays)}<br>${fmt(r.minutes)} min</div>
+        <div class="count">${fmt(r.plays)}${r.minutes != null ? `<br>${fmt(r.minutes)} min` : " ×"}</div>
       </${linkFor ? "a" : "div"}>
     </li>`;
   }).join("");
@@ -198,7 +200,8 @@ function renderRecent(rows) {
     const pct = r.duration ? Math.round((r.listened / r.duration) * 100) : null;
     return `<tr>
       <td class="muted">${t.toLocaleDateString("da-DK", { day: "numeric", month: "short" })} ${t.toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" })}</td>
-      <td><strong>${esc(r.name || "Ukendt")}</strong> <span class="muted">· ${esc(r.artist || "")}</span></td>
+      <td><a class="plain" href="${esc(trackLink(r.item_id))}"><strong>${esc(r.name || "Ukendt")}</strong></a>
+        ${r.artist ? `<span class="muted">· <a class="plain" href="${esc(artistLink(r.artist))}">${esc(r.artist)}</a></span>` : ""}</td>
       <td>${r.counted ? "" : `<span class="tag">sprunget over</span>`}</td>
       <td class="muted">${pct != null ? pct + " %" : ""}</td>
       <td class="muted">${esc(r.user_name || "")}</td>
@@ -258,8 +261,8 @@ async function loadDashboard() {
   renderKpis(summary);
   renderTimeline(timeline, bucket);
   renderTop("top-artists", artists, (r) => artistLink(r.name));
-  renderTop("top-albums", albums);
-  renderTop("top-tracks", tracks);
+  renderTop("top-albums", albums, (r) => albumLink(r.key));
+  renderTop("top-tracks", tracks, (r) => trackLink(r.key));
   renderShareArea("genres", genres, trend, (_, i) => PALETTE[i % PALETTE.length]);
   moods.series.forEach((s) => (s.label = labels[s.name] || s.name));
   renderShareArea("moods", moods, trend, (name) => MOOD_COLORS[name] || "#94a3b8");
@@ -276,12 +279,18 @@ const longDate = (t) => new Date(t * 1000).toLocaleDateString("da-DK", { day: "n
 const capital = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const WEEKDAY_NAMES = ["mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag"];
 
-async function loadArtist(name) {
+const KIND_TEXT = {
+  artist: { rank: "kunstnere", list: "Top sange" },
+  album: { rank: "albums", list: "Sange på albummet" },
+  track: { rank: "sange", list: "Ofte hørt lige efter" },
+};
+
+async function loadDetail(kind, key) {
   let a;
   try {
-    a = await api("artist", { name });
+    a = await api("detail", { kind, key });
   } catch {
-    $("#artist-hero").innerHTML = `<div><h2>${esc(name)}</h2><div class="sub">Ingen lytninger i den valgte periode – prøv en længere periode.</div></div>`;
+    $("#artist-hero").innerHTML = `<div><h2>Ingen lytninger i perioden</h2><div class="sub">Prøv en længere periode, fx "Alt".</div></div>`;
     for (const id of ["artist-kpis", "artist-tracks", "artist-albums"]) document.getElementById(id).innerHTML = "";
     chart("artist-months").clear();
     chart("artist-hours").clear();
@@ -289,11 +298,17 @@ async function loadArtist(name) {
   }
   const labels = state.meta.moods;
   const favDay = a.weekdays.indexOf(Math.max(...a.weekdays));
+  const by = [
+    a.artists.length ? `af ${a.artists.map((n) => `<a href="${esc(artistLink(n))}">${esc(n)}</a>`).join(", ")}` : "",
+    a.album ? `fra <a href="${esc(albumLink(a.album.id))}">${esc(a.album.name)}</a>` : "",
+    a.year ? `(${a.year})` : "",
+  ].filter(Boolean).join(" ");
   $("#artist-hero").innerHTML = `
     ${cover(a.image_id, a.name, "cover")}
     <div style="min-width:0">
-      ${a.rank ? `<div class="sub">#${a.rank} blandt dine kunstnere i perioden</div>` : ""}
+      ${a.rank ? `<div class="sub">#${a.rank} blandt dine ${KIND_TEXT[kind].rank} i perioden</div>` : ""}
       <h2>${esc(a.name)}</h2>
+      ${by ? `<div class="sub links">${by}</div>` : ""}
       ${a.first ? `<div class="sub">Første gang hørt ${longDate(a.first)}</div>` : ""}
       <div class="chips">
         ${a.genres.map((g) => `<span class="chip">${esc(g.name)}</span>`).join("")}
@@ -304,12 +319,14 @@ async function loadArtist(name) {
   $("#artist-kpis").innerHTML = [
     kpi("Lytninger", fmt(a.plays), `${fmt(a.share * 100, 1)} % af al lytning`),
     kpi("Lyttetid", `${fmt(a.minutes / 60, 1)} t`),
-    kpi("Sange", fmt(a.tracks), `fra ${fmt(a.albums)} albums`),
+    kind === "artist" && kpi("Sange", fmt(a.tracks), `fra ${fmt(a.albums)} albums`),
+    kind === "album" && kpi("Sange hørt", fmt(a.tracks)),
+    kind === "track" && a.duration && kpi("Længde", `${Math.floor(a.duration / 60)}:${String(Math.round(a.duration % 60)).padStart(2, "0")}`),
     kpi("Dage", fmt(a.days), "med mindst én lytning"),
     kpi("Yndlingsdag", capital(WEEKDAY_NAMES[favDay])),
     kpi("Skip-rate", `${fmt(a.skip_rate * 100)} %`),
     kpi("Sidst hørt", new Date(a.last * 1000).toLocaleDateString("da-DK", { day: "numeric", month: "short" })),
-  ].join("");
+  ].filter(Boolean).join("");
 
   const months = baseOption();
   months.legend.show = false;
@@ -323,8 +340,11 @@ async function loadArtist(name) {
   hours.series = [{ type: "bar", name: "Lytninger", data: a.hours, itemStyle: { color: "#14b8a6", borderRadius: [3, 3, 0, 0] } }];
   chart("artist-hours").setOption(hours, true);
 
-  renderTop("artist-tracks", a.top_tracks);
-  renderTop("artist-albums", a.top_albums);
+  $("#artist-tracks-title").textContent = KIND_TEXT[kind].list;
+  $("#artist-tracks-hint").textContent = kind === "track" ? "inden for 10 min" : "";
+  renderTop("artist-tracks", a.top_tracks, (r) => trackLink(r.key));
+  $("#artist-albums-card").hidden = kind !== "artist";
+  renderTop("artist-albums", a.top_albums, (r) => albumLink(r.key));
 }
 
 // --- wrapped ------------------------------------------------------------------
@@ -379,8 +399,8 @@ async function loadWrapped() {
     </section>` : ""}
     <div class="wr-row">
       <section class="wr-card"><div class="eyebrow">Top kunstnere</div>${list(w.top_artists, (r) => artistLink(r.name))}</section>
-      <section class="wr-card"><div class="eyebrow">Top sange</div>${list(w.top_tracks)}</section>
-      <section class="wr-card"><div class="eyebrow">Top albums</div>${list(w.top_albums)}</section>
+      <section class="wr-card"><div class="eyebrow">Top sange</div>${list(w.top_tracks, (r) => trackLink(r.key))}</section>
+      <section class="wr-card"><div class="eyebrow">Top albums</div>${list(w.top_albums, (r) => albumLink(r.key))}</section>
     </div>
     <div class="wr-row">${facts}</div>
     <div class="grid two">
@@ -456,7 +476,8 @@ async function loadCompare() {
 
 // --- routing ------------------------------------------------------------------
 
-const VIEWS = ["dashboard", "artist", "wrapped", "compare"];
+const DETAIL_VIEWS = ["artist", "album", "track"];  // all rendered into #view-artist
+const VIEWS = ["dashboard", ...DETAIL_VIEWS, "wrapped", "compare"];
 
 function currentRoute() {
   const [view, arg] = location.hash.replace(/^#\/?/, "").split("/");
@@ -471,15 +492,16 @@ function updateControls(view) {
   document.querySelector('#nav a[data-view="compare"]').hidden = !multiUser;
   $("#export").href = `api/export.csv?${rangeParams()}`;
   document.querySelectorAll("#nav a").forEach((a) =>
-    a.classList.toggle("on", a.dataset.view === view || (view === "artist" && a.dataset.view === "dashboard")));
+    a.classList.toggle("on", a.dataset.view === view || (DETAIL_VIEWS.includes(view) && a.dataset.view === "dashboard")));
 }
 
 async function refresh() {
   const { view, arg } = currentRoute();
-  VIEWS.forEach((v) => ($(`#view-${v}`).hidden = v !== view));
+  const shown = DETAIL_VIEWS.includes(view) ? "artist" : view;
+  ["dashboard", "artist", "wrapped", "compare"].forEach((v) => ($(`#view-${v}`).hidden = v !== shown));
   updateControls(view);
   try {
-    if (view === "artist") await loadArtist(arg);
+    if (DETAIL_VIEWS.includes(view)) await loadDetail(view, arg);
     else if (view === "wrapped") await loadWrapped();
     else if (view === "compare") await loadCompare();
     else await loadDashboard();
