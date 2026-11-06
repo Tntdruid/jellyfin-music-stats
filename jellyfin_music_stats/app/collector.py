@@ -10,6 +10,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 
+import httpx
+
 import db
 import enrich
 from config import Settings
@@ -38,6 +40,18 @@ class ActivePlay:
     listened: float = 0.0
 
 
+def describe_error(e: Exception) -> str:
+    if isinstance(e, httpx.HTTPStatusError):
+        if e.response.status_code in (401, 403):
+            return "Jellyfin afviste API-nøglen – tjek api_key i add-on'ets konfiguration"
+        return f"Jellyfin svarede {e.response.status_code}"
+    if isinstance(e, httpx.ConnectError):
+        return f"Kan ikke forbinde til Jellyfin – tjek jellyfin_url ({e})"
+    if isinstance(e, httpx.TimeoutException):
+        return "Jellyfin svarer ikke (timeout)"
+    return str(e)
+
+
 @dataclass
 class CollectorState:
     active: Dict[str, ActivePlay] = field(default_factory=dict)
@@ -59,8 +73,8 @@ class Collector:
                 await self.poll()
                 self.state.last_error = None
             except Exception as e:  # keep polling; Jellyfin may just be restarting
-                self.state.last_error = str(e)
-                log.warning("poll failed: %s", e)
+                self.state.last_error = describe_error(e)
+                log.warning("poll failed: %s", self.state.last_error)
             await asyncio.sleep(self.settings.poll_interval)
 
     async def poll(self) -> None:

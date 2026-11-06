@@ -31,8 +31,8 @@ def load_settings() -> Settings:
 
     return Settings(
         jellyfin_url=str(pick("jellyfin_url", "")).rstrip("/"),
-        api_key=str(pick("api_key", "")),
+        api_key=str(pick("api_key", "")).strip(),
         poll_interval=int(pick("poll_interval", 10)),
         min_play_percent=int(pick("min_play_percent", 50)),
-        lastfm_api_key=str(pick("lastfm_api_key", "")),
+        lastfm_api_key=str(pick("lastfm_api_key", "")).strip(),
     )

@@ -10,7 +10,15 @@ class JellyfinClient:
     def __init__(self, base_url: str, api_key: str):
         self.client = httpx.AsyncClient(
             base_url=base_url,
-            headers={"X-Emby-Token": api_key, "Accept": "application/json"},
+            headers={
+                # the standard scheme; newer Jellyfin versions can reject the legacy X-Emby-Token header
+                "Authorization": (
+                    'MediaBrowser Client="Jellyfin Music Stats", Device="Home Assistant", '
+                    f'DeviceId="jellyfin-music-stats", Version="0.1", Token="{api_key}"'
+                ),
+                "X-Emby-Token": api_key,
+                "Accept": "application/json",
+            },
             timeout=15,
         )
 
