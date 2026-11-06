@@ -33,5 +33,5 @@ Hvert nummer får op til tre humørkategorier: energisk, glad, rolig, melankolsk
 ## Bemærk
 
 - Jellyfin gemmer ikke selv en lyttehistorik, så statistikken starter først, når add-on'et kører.
-- Data gemmes i SQLite-filen `music_stats.db` i add-on'ets offentlige config-mappe. Via Samba ligger den under `addon_configs/<id>_jellyfin_music_stats/`, så du kan kopiere den eller åbne den i fx DB Browser for SQLite. Filen kommer med i Home Assistants backups.
+- Data gemmes i SQLite-filen `music_stats.db` i add-on'ets offentlige config-mappe. Via Samba ligger den under `app_configs/<id>_jellyfin_music_stats/` (`addon_configs` på ældre Home Assistant), så du kan kopiere den eller åbne den i fx DB Browser for SQLite. Filen kommer med i Home Assistants backups.
 - Opdaterer du fra en version før 0.4.0, flyttes din eksisterende database automatisk dertil første gang add-on'et starter.
