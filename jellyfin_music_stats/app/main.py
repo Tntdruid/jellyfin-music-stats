@@ -17,6 +17,7 @@ from enrich import Enricher
 from jellyfin import JellyfinClient
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+logging.getLogger("httpx").setLevel(logging.WARNING)  # otherwise one line per poll
 log = logging.getLogger("main")
 
 settings = load_settings()

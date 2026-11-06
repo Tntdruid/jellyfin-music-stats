@@ -12,7 +12,7 @@ Prikken ved titlen viser forbindelsen: grøn betyder forbundet, rød betyder fej
 
 ### Jellyfin URL
 
-Jellyfin-add-on'et kører på samme maskine, så det er nok at bruge Home Assistants IP-adresse med port 8096, fx `http://192.168.1.10:8096`. Du kan også bruge add-on'ets interne værtsnavn, som står på Jellyfin-add-on'ets infoside under *Hostname*, fx `http://xxxxxxxx-jellyfin:8096`.
+Jellyfin-add-on'et kører på samme maskine, så det er nok at bruge Home Assistants IP-adresse med port 8096, fx `http://192.168.1.10:8096`. Du kan også bruge add-on'ets interne værtsnavn, som står på Jellyfin-add-on'ets infoside under *Hostname*, fx `http://2937404c-jellyfin:8096` for det officielle Jellyfin-add-on.
 
 ## Indstillinger
 
