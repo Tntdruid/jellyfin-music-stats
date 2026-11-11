@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+
+- Backup-opsamler: fanger lytninger fra apps, der ikke rapporterer "spiller nu" (fx Jellyfin Media Player), via Jellyfins afspilningstal
+- Sådanne lytninger vises med mærket "fundet bagefter" under Seneste afspilninger
+- Der opstår ingen dobbelttællinger, når en afspilning allerede er set live
+
 ## 0.5.2
 
 - Loggen viser nu, hvad Jellyfin rapporterer (app, enhed, bruger og hvad der spilles), hver gang det ændrer sig, og hver gemt afspilning

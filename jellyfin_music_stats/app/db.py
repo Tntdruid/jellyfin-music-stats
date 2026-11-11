@@ -43,7 +43,26 @@ CREATE TABLE IF NOT EXISTS plays (
 CREATE INDEX IF NOT EXISTS idx_plays_started ON plays(started_at);
 CREATE INDEX IF NOT EXISTS idx_plays_item ON plays(item_id);
 CREATE INDEX IF NOT EXISTS idx_plays_user ON plays(user_id);
+
+-- Jellyfin's play counts as last seen by the backup collector, per user and track
+CREATE TABLE IF NOT EXISTS seen_play_counts (
+    user_id    TEXT NOT NULL,
+    item_id    TEXT NOT NULL,
+    play_count INTEGER NOT NULL,
+    PRIMARY KEY (user_id, item_id)
+);
+
+-- when the backup collector started watching a user; plays before this are history, not new
+CREATE TABLE IF NOT EXISTS backup_users (
+    user_id TEXT PRIMARY KEY,
+    since   INTEGER NOT NULL
+);
 """
+
+# columns added after the first release; ALTER TABLE has no IF NOT EXISTS
+COLUMNS = [
+    ("plays", "source", "TEXT NOT NULL DEFAULT 'live'"),  # 'live' = seen playing, 'backup' = found afterwards
+]
 
 _lock = threading.Lock()
 _conn: Optional[sqlite3.Connection] = None
@@ -73,6 +92,11 @@ def connect() -> sqlite3.Connection:
         _conn.row_factory = sqlite3.Row
         _conn.execute("PRAGMA journal_mode=WAL")
         _conn.executescript(SCHEMA)
+        for table, column, decl in COLUMNS:
+            existing = {r["name"] for r in _conn.execute(f"PRAGMA table_info({table})")}
+            if column not in existing:
+                _conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+        _conn.commit()
     return _conn
 
 
@@ -113,10 +137,11 @@ def set_moods(item_id: str, moods: list, source: str) -> None:
 def insert_play(p: dict) -> None:
     execute(
         """INSERT INTO plays (item_id, user_id, user_name, client, device, started_at, ended_at,
-                              listened, duration, counted)
-           VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                              listened, duration, counted, source)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
         (
             p["item_id"], p["user_id"], p["user_name"], p["client"], p["device"],
             p["started_at"], p["ended_at"], p["listened"], p["duration"], p["counted"],
+            p.get("source", "live"),
         ),
     )

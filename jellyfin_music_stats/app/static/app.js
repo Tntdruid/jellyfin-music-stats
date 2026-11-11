@@ -208,8 +208,10 @@ function renderRecent(rows) {
       <td class="muted">${t.toLocaleDateString("da-DK", { day: "numeric", month: "short" })} ${t.toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" })}</td>
       <td><a class="plain" href="${esc(trackLink(r.item_id))}"><strong>${esc(r.name || "Ukendt")}</strong></a>
         ${r.artist ? `<span class="muted">· <a class="plain" href="${esc(artistLink(r.artist))}">${esc(r.artist)}</a></span>` : ""}</td>
-      <td>${r.counted ? "" : `<span class="tag">sprunget over</span>`}</td>
-      <td class="muted">${pct != null ? pct + " %" : ""}</td>
+      <td>${r.source === "backup"
+        ? `<span class="tag" title="Appen rapporterede ikke afspilningen live; fundet via Jellyfins afspilningstal">fundet bagefter</span>`
+        : r.counted ? "" : `<span class="tag">sprunget over</span>`}</td>
+      <td class="muted">${pct != null && r.source !== "backup" ? pct + " %" : ""}</td>
       <td class="muted">${esc(r.user_name || "")}</td>
     </tr>`;
   }).join("") : `<tr><td class="empty">Ingen afspilninger endnu</td></tr>`;

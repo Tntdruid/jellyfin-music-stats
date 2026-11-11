@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 import db
 import stats
 import views
+from backup import BackupCollector
 from collector import Collector
 from config import load_settings
 from enrich import Enricher
@@ -24,7 +25,7 @@ log = logging.getLogger("main")
 
 settings = load_settings()
 STATIC = Path(__file__).parent / "static"
-state = {"collector": None, "client": None}
+state = {"collector": None, "client": None, "backup": None}
 
 
 @asynccontextmanager
@@ -34,8 +35,10 @@ async def lifespan(app: FastAPI):
     if settings.collector_enabled:
         client = JellyfinClient(settings.jellyfin_url, settings.api_key)
         collector = Collector(settings, client)
-        state.update(client=client, collector=collector)
+        backup = BackupCollector(client, collector)
+        state.update(client=client, collector=collector, backup=backup)
         tasks.append(asyncio.create_task(collector.run()))
+        tasks.append(asyncio.create_task(backup.run()))
         log.info("collecting from %s every %ss", settings.jellyfin_url, settings.poll_interval)
     else:
         log.warning("jellyfin_url/api_key not set - collector disabled, serving existing data only")

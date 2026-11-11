@@ -39,6 +39,14 @@ Hvert nummer får op til tre humørkategorier: energisk, glad, rolig, melankolsk
 2. Last.fm-tags for nummeret, og derefter for kunstneren (kræver `lastfm_api_key`)
 3. Et groft gæt ud fra genren
 
+## Apps der ikke rapporterer afspilning
+
+Lytninger bliver normalt registreret live via Jellyfins "spiller nu". Nogle apps, fx Jellyfin Media Player, sender ikke altid den besked. De giver dog stadig Jellyfin besked, når et nummer er hørt færdigt.
+
+Add-on'et har derfor en **backup-opsamler**, som hvert halvandet minut tjekker, om Jellyfins afspilningstal er steget for nogle numre. Lytninger, der ikke blev set live, gemmes alligevel og markeres som **"fundet bagefter"** under Seneste afspilninger. Den kan ikke se, hvor meget af et nummer du hørte, så de tæller altid som hele lytninger. Skips fra sådanne apps kommer ikke med.
+
+Første gang backup-opsamleren ser en bruger, noterer den bare de nuværende tal, så gammel historik ikke bliver lagt ind som nye lytninger.
+
 ## Bemærk
 
 - Jellyfin gemmer ikke selv en lyttehistorik, så statistikken starter først, når add-on'et kører.

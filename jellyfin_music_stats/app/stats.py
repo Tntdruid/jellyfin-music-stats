@@ -285,7 +285,7 @@ def recent(scope: Scope, limit: int = 15) -> list:
     cte, params = _plays_cte(scope, counted=None)
     return db.query(
         f"""{cte} SELECT item_id, name, json_extract(artists,'$[0]') AS artist, album_id, user_name,
-                  started_at, listened, duration, counted
+                  started_at, listened, duration, counted, source
             FROM p ORDER BY started_at DESC LIMIT ?""",
         [*params, limit],
     )

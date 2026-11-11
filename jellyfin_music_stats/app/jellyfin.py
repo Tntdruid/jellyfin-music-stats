@@ -43,6 +43,28 @@ class JellyfinClient:
         items = r.json().get("Items", [])
         return to_track(items[0]) if items else None
 
+    async def users(self) -> list:
+        r = await self.client.get("/Users")
+        r.raise_for_status()
+        return r.json()
+
+    async def recently_played(self, user_id: str, limit: int = 50) -> list:
+        """The user's most recently played tracks, with their UserData (PlayCount, LastPlayedDate)."""
+        r = await self.client.get("/Items", params={
+            "userId": user_id,
+            "includeItemTypes": "Audio",
+            "recursive": "true",
+            "filters": "IsPlayed",
+            "sortBy": "DatePlayed",
+            "sortOrder": "Descending",
+            "limit": limit,
+            "fields": "Genres,Tags,ProductionYear",
+            "enableUserData": "true",
+            "enableImages": "false",
+        })
+        r.raise_for_status()
+        return r.json().get("Items", [])
+
     async def image(self, item_id: str, max_width: int = 300) -> Optional[httpx.Response]:
         r = await self.client.get(
             f"/Items/{item_id}/Images/Primary", params={"maxWidth": max_width, "quality": 85}
