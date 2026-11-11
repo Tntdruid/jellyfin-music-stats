@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/logo.png" width="160" alt="Jellyfin Music Stats logo"></p>
+
 <h1 align="center">Jellyfin Music Stats</h1>
 
 🇬🇧 [English](#english) · 🇩🇰 [Dansk](#dansk)
