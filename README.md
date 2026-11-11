@@ -37,3 +37,11 @@ cd jellyfin_music_stats/app && DATA_DIR=../../dev/data ../../.venv/Scripts/pytho
 ```
 
 Hvis du sætter `JELLYFIN_URL` og `API_KEY` som miljøvariabler, opsamler den lokale udgave også rigtige data.
+
+<!-- jellyfin-projects:start -->
+## Flere Jellyfin-projekter
+
+- **[Jellyfin Video Stats](https://github.com/Tntdruid/jellyfin-video-stats)** – Home Assistant-add-on med seerstatistik for film, serier og YouTube-videoer: fremdrift, binge, transcoding, Wrapped
+- **[Episode Title Fixer](https://github.com/Tntdruid/jellyfin-plugin-episode-title-fixer)** – Jellyfin-plugin, der erstatter pladsholdere som "Afsnit 11" med afsnittets originale titel
+- **[Auto Artist Playlists](https://github.com/Tntdruid/jellyfin-plugin-auto-artist-playlists)** – Jellyfin-plugin, der giver hjerte til de sange, du hører, og samler dem i en playliste pr. kunstner
+<!-- jellyfin-projects:end -->
