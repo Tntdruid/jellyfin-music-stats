@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.1
+
+- Albumcovers gemmes lokalt ved siden af databasen, så de stadig vises, hvis et album slettes fra Jellyfin. De kommer også med i backups.
+- Logo og ikon i add-on-butikken
+- Tests, tjek af add-on-konfigurationen og byg af imaget for amd64 og aarch64 kører nu automatisk på GitHub ved hvert push
+
 ## 0.6.0
 
 - Backup-opsamler: fanger lytninger fra apps, der ikke rapporterer "spiller nu" (fx Jellyfin Media Player), via Jellyfins afspilningstal

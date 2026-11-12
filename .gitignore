@@ -1,7 +1,11 @@
 goal.md
 __pycache__/
 *.db
+*.db-shm
+*.db-wal
 dev/data/
 .venv/
+.pytest_cache/
+.ruff_cache/
 jellyfin_music_stats/app/static/echarts.min.js
 .claude/

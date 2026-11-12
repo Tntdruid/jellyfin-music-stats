@@ -107,6 +107,7 @@ class BackupCollector:
             db.upsert_track(track)
             self.collector.known_tracks.add(track["item_id"])
             enrich.queue(track["item_id"])
+            self.collector.prefetch_cover(track)
 
         if self._playing_live(user_id, track["item_id"]):
             return  # the live collector will save this one itself

@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 import db
+import images
 import stats
 import views
 from backup import BackupCollector
@@ -179,13 +180,13 @@ def export(start: Optional[int] = None, end: Optional[int] = None, user: Optiona
 
 @app.get("/api/image/{item_id}")
 async def image(item_id: str):
-    if not state["client"] or not item_id.isalnum():
+    if not item_id.isalnum():
         raise HTTPException(404)
-    r = await state["client"].image(item_id)
-    if not r:
+    path = await images.get(state["client"], item_id)
+    if not path:
         raise HTTPException(404)
-    return Response(r.content, media_type=r.headers.get("content-type", "image/jpeg"),
-                    headers={"Cache-Control": "public, max-age=604800"})
+    return FileResponse(path, media_type=images.MEDIA_TYPE.get(path.suffix, "image/jpeg"),
+                        headers={"Cache-Control": "public, max-age=86400"})
 
 
 @app.get("/")

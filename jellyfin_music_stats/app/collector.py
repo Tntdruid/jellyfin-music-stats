@@ -14,6 +14,7 @@ import httpx
 
 import db
 import enrich
+import images
 from config import Settings
 from jellyfin import TICKS_PER_SECOND, JellyfinClient, to_track
 
@@ -67,6 +68,7 @@ class Collector:
         self.client = client
         self.state = CollectorState()
         self._last_sessions: Optional[list] = None
+        self._tasks: set = set()
         self.known_tracks = {r["item_id"] for r in db.query("SELECT item_id FROM tracks")}
 
     async def run(self) -> None:
@@ -188,6 +190,12 @@ class Collector:
         db.upsert_track(track)
         self.known_tracks.add(item_id)
         enrich.queue(item_id)
+        self.prefetch_cover(track)
+
+    def prefetch_cover(self, track: dict) -> None:
+        task = asyncio.create_task(images.prefetch(self.client, [track.get("album_id") or track["item_id"]]))
+        self._tasks.add(task)  # keep a reference until it is done
+        task.add_done_callback(self._tasks.discard)
 
     def now_playing(self) -> list:
         return [

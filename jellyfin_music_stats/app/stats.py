@@ -1,5 +1,4 @@
 """Read-side queries for the dashboard. All times are bucketed in the container's local time zone."""
-import json
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
