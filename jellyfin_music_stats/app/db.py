@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS backup_users (
 # columns added after the first release; ALTER TABLE has no IF NOT EXISTS
 COLUMNS = [
     ("plays", "source", "TEXT NOT NULL DEFAULT 'live'"),  # 'live' = seen playing, 'backup' = found afterwards
+    ("tracks", "genres_raw", "TEXT"),  # Jellyfin's genres as tagged; tracks.genres holds the merged ones
 ]
 
 _lock = threading.Lock()
@@ -113,19 +114,21 @@ def execute(sql: str, params=()) -> None:
 
 
 def upsert_track(t: dict) -> None:
+    import genres  # imported here: genres imports db
+
     execute(
-        """INSERT INTO tracks (item_id, name, album, album_id, album_artist, artists, genres, tags,
+        """INSERT INTO tracks (item_id, name, album, album_id, album_artist, artists, genres, genres_raw, tags,
                                year, duration, fetched_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
            ON CONFLICT(item_id) DO UPDATE SET
                name=excluded.name, album=excluded.album, album_id=excluded.album_id,
                album_artist=excluded.album_artist, artists=excluded.artists, genres=excluded.genres,
-               tags=excluded.tags, year=excluded.year, duration=excluded.duration,
-               fetched_at=excluded.fetched_at""",
+               genres_raw=excluded.genres_raw, tags=excluded.tags, year=excluded.year,
+               duration=excluded.duration, fetched_at=excluded.fetched_at""",
         (
             t["item_id"], t["name"], t["album"], t["album_id"], t["album_artist"],
-            json.dumps(t["artists"]), json.dumps(t["genres"]), json.dumps(t["tags"]),
-            t["year"], t["duration"], t["fetched_at"],
+            json.dumps(t["artists"]), json.dumps(genres.canonical(t["genres"])), json.dumps(t["genres"]),
+            json.dumps(t["tags"]), t["year"], t["duration"], t["fetched_at"],
         ),
     )
 

@@ -3,7 +3,7 @@ import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 DATA_DIR = Path(os.environ.get("DATA_DIR", "/data"))
 # The add-on's public config folder (map: addon_config), visible as addon_configs/<slug> over Samba.
@@ -20,6 +20,8 @@ class Settings:
     lastfm_api_key: str = ""
     # Home Assistant user -> Jellyfin user, lowercased, for people whose names differ
     user_map: Dict[str, str] = field(default_factory=dict)
+    # "from=to" entries that merge genres the automatic merging can't see are the same
+    genre_map: List[str] = field(default_factory=list)
 
     @property
     def collector_enabled(self) -> bool:
@@ -42,6 +44,7 @@ def load_settings() -> Settings:
         min_play_percent=int(pick("min_play_percent", 50)),
         lastfm_api_key=str(pick("lastfm_api_key", "")).strip(),
         user_map=parse_user_map(options.get("user_map") or os.environ.get("USER_MAP", "").split(",")),
+        genre_map=list(options.get("genre_map") or [e for e in os.environ.get("GENRE_MAP", "").split(",") if e]),
     )
 
 

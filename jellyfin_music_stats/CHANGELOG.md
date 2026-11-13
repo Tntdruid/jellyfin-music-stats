@@ -2,6 +2,20 @@
 
 🇬🇧 English first, 🇩🇰 dansk nedenunder i hver version.
 
+## 0.7.0
+
+🇬🇧
+- Genres spelled differently are merged: spellings that only differ in case, spaces, hyphens, slashes or underscores (e.g. "Singer/Songwriter" and "Singer-Songwriter") automatically become one genre, under the spelling your library uses most
+- New option `genre_map` to merge other genres, e.g. `Alternative=Alternativ`
+- The log suggests genres that look alike when the add-on starts
+- Jellyfin's original genres are kept, and a changed `genre_map` is applied to all existing statistics on the next start
+
+🇩🇰
+- Genrer, der er stavet forskelligt, slås sammen: navne, der kun adskiller sig ved store og små bogstaver, mellemrum, bindestreger, skråstreger eller understreger (fx "Singer/Songwriter" og "Singer-Songwriter"), bliver automatisk til én genre under den stavemåde, dit bibliotek bruger mest
+- Ny indstilling `genre_map` til at slå andre genrer sammen, fx `Alternative=Alternativ`
+- Loggen foreslår genrer, der ligner hinanden, når add-on'et starter
+- Jellyfins oprindelige genrer bliver gemt, og en ændret `genre_map` bliver brugt på al eksisterende statistik ved næste start
+
 ## 0.6.1
 
 🇬🇧

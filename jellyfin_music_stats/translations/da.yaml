@@ -17,3 +17,6 @@ configuration:
   user_map:
     name: Brugerkobling
     description: Kobler Home Assistant-brugere til Jellyfin-brugere, når navnene er forskellige. Én linje pr. bruger, fx "christian=Tntdruid".
+  genre_map:
+    name: Slå genrer sammen
+    description: Genrer, der skal tælle som én, når navnene er forskellige. Én linje pr. genre, fx "Alternative=Alternativ". Store/små bogstaver, mellemrum, bindestreger og skråstreger slås sammen automatisk.

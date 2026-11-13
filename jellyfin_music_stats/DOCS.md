@@ -22,6 +22,22 @@ Jellyfin-add-on'et kører på samme maskine, så det er nok at bruge Home Assist
 | `min_play_percent` | Hvor stor en del af et nummer der skal høres, før det tæller som en lytning. Fire minutter tæller altid, som hos Last.fm. Kortere afspilninger registreres som skips. |
 | `lastfm_api_key` | Valgfri. Henter humør-tags fra Last.fm for numre, der ikke har nogen. Du kan få en gratis nøgle på https://www.last.fm/api/account/create |
 | `user_map` | Valgfri. Kobler Home Assistant-brugere til Jellyfin-brugere, når navnene er forskellige. Én linje pr. bruger, fx `christian=Tntdruid`. |
+| `genre_map` | Valgfri. Slår genrer med forskellige navne sammen. Én linje pr. genre, fx `Alternative=Alternativ`. Se [Genrer](#genrer). |
+
+## Genrer
+
+Genrer kommer fra taggene i dine musikfiler, og de er ofte stavet forskelligt. Add-on'et rydder op i to trin:
+
+1. **Automatisk:** Navne, der kun adskiller sig ved store og små bogstaver, mellemrum, bindestreger, skråstreger eller understreger, fx "Hip-Hop", "Hip Hop" og "hip hop" eller "Singer/Songwriter" og "Singer-Songwriter", bliver til én genre. Den stavemåde, der bruges mest i dit bibliotek, vinder.
+2. **Med `genre_map`:** Andre navne kobler du selv. Den del, der står før `=`, er den genre, der skal forsvinde, og den del, der står efter, er den, den skal tælle som. Fx `Alternative=Alternativ`.
+
+Når add-on'et starter, skriver det **forslag** i loggen, hvis nogle genrer ligner hinanden, fx:
+
+```
+mulig dublet: 'Alternative' og 'Alternativ' – tilføj fx 'Alternative=Alternativ' under genre_map
+```
+
+Taggene i dine filer bliver ikke ændret, og den oprindelige genre fra Jellyfin bliver gemt. Hvis du ændrer `genre_map`, bliver al eksisterende statistik omregnet ved næste start.
 
 ## Flere brugere
 

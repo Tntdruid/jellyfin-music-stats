@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 import db
+import genres as genre_names  # "genres" is also an endpoint below
 import images
 import stats
 import views
@@ -32,6 +33,8 @@ state = {"collector": None, "client": None, "backup": None}
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db.connect()
+    genre_names.configure(settings.genre_map)
+    genre_names.rebuild()
     tasks = [asyncio.create_task(Enricher(settings.lastfm_api_key).run())]
     if settings.collector_enabled:
         client = JellyfinClient(settings.jellyfin_url, settings.api_key)

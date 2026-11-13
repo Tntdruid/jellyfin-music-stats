@@ -3,6 +3,7 @@
 Jellyfin is replaced by small fakes that answer like the real API.
 """
 import asyncio
+import json
 import sqlite3
 from datetime import datetime, timezone
 
@@ -12,6 +13,7 @@ from fastapi.testclient import TestClient
 import backup
 import collector
 import db
+import genres
 import images
 import main
 from config import Settings, parse_user_map
@@ -258,3 +260,36 @@ def test_image_endpoint_serves_cached_cover(client):
     r = client.get("/api/image/timg2")
     assert r.status_code == 200 and r.content == b"img-timg2"
     assert client.get("/api/image/missing").status_code == 404
+
+
+# --- genres -----------------------------------------------------------------
+
+def test_genre_spellings_are_merged_and_mapped():
+    base = {"name": "x", "album": None, "album_id": None, "album_artist": None, "artists": ["G"], "tags": [],
+            "year": None, "duration": 100, "fetched_at": 0}
+    tagged = [["Synth-Pop"], ["synth pop"], ["Synth-Pop", "Alternative"], ["Alternativ"], ["Alternativ"]]
+    for i, g in enumerate(tagged):
+        db.upsert_track({**base, "item_id": f"tg{i}", "genres": g})
+
+    def stored():
+        rows = db.query("SELECT item_id, genres, genres_raw FROM tracks WHERE item_id LIKE 'tg%'")
+        return {r["item_id"]: (json.loads(r["genres"]), json.loads(r["genres_raw"])) for r in rows}
+
+    genres.rebuild()
+    assert stored()["tg1"][0] == ["Synth-Pop"]  # case and hyphen merged; the most used spelling wins
+    assert ("Alternative", "Alternativ") in genres.suggestions()
+
+    genres.configure(["alternative = Alternativ"])
+    try:
+        genres.rebuild()  # a new genre_map is applied to tracks already in the database
+        merged, raw = stored()["tg2"]
+        assert merged == ["Synth-Pop", "Alternativ"] and raw == ["Synth-Pop", "Alternative"]
+        assert ("Alternative", "Alternativ") not in genres.suggestions()
+    finally:
+        genres.configure([])
+        genres.rebuild()
+    assert stored()["tg2"][0] == ["Synth-Pop", "Alternative"]  # and removing it brings the original back
+
+
+def test_genre_map_parsing():
+    assert genres.parse_map(["Hip_Hop=Hip-Hop", "broken", "=x", ""]) == {"hip hop": "Hip-Hop"}

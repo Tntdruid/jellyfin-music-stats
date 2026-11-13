@@ -17,3 +17,6 @@ configuration:
   user_map:
     name: User mapping
     description: Links Home Assistant users to Jellyfin users when their names differ. One line per user, e.g. "christian=Tntdruid".
+  genre_map:
+    name: Merge genres
+    description: Genres that should count as one when their names differ. One line per genre, e.g. "Alternative=Alternativ". Case, spaces, hyphens and slashes are merged automatically.
