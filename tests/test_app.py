@@ -16,6 +16,7 @@ import db
 import genres
 import images
 import main
+import progress
 from config import Settings, parse_user_map
 
 T = 10_000_000
@@ -293,3 +294,49 @@ def test_genre_spellings_are_merged_and_mapped():
 
 def test_genre_map_parsing():
     assert genres.parse_map(["Hip_Hop=Hip-Hop", "broken", "=x", ""]) == {"hip hop": "Hip-Hop"}
+
+
+# --- artist progress --------------------------------------------------------
+
+def lib_track(i, album, year, played=False, ticks=200 * T):
+    return {"Id": i, "Name": f"Sang {i}", "AlbumId": album, "Album": f"Album {album}", "ProductionYear": year,
+            "RunTimeTicks": ticks, "UserData": {"Played": played, "PlayCount": 1 if played else 0}}
+
+
+class FakeArtistLibrary:
+    def __init__(self, items):
+        self.items, self.calls = items, 0
+
+    async def artist_tracks(self, name, user_id):
+        self.calls += 1
+        return self.items if name == "Fremdriftskunstner" else None
+
+
+def test_artist_progress_counts_plays_and_jellyfin_marks():
+    items = [lib_track("pa1", "A", 2001, played=True), lib_track("pa2", "A", 2001), lib_track("pa3", "A", 2001),
+             lib_track("pb1", "B", 2005), lib_track("pb2", "B", 2005)]
+    d = progress.summarise(items, heard_here={"pa3"})  # pa1 marked in Jellyfin, pa3 heard here
+    assert (d["heard"], d["total"]) == (2, 5)
+    assert [(a["name"], a["heard"], a["total"]) for a in d["albums"]] == [("Album A", 2, 3), ("Album B", 0, 2)]
+    assert d["next"]["item_id"] == "pa2"  # first unheard track on the album you've come furthest with
+    assert d["minutes_left"] == 10.0  # three unheard tracks of 200 s
+
+
+def test_artist_progress_endpoint_caches_and_forgets_after_a_new_play(client, monkeypatch):
+    fake = FakeArtistLibrary([lib_track("pc1", "C", 2010), lib_track("pc2", "C", 2010)])
+    monkeypatch.setitem(main.state, "client", fake)
+    progress.forget()
+
+    assert client.get("/api/artist-progress?name=Fremdriftskunstner&user=u1").json()["heard"] == 0
+    client.get("/api/artist-progress?name=Fremdriftskunstner&user=u1")
+    assert fake.calls == 1  # second look comes from the cache
+
+    db.insert_play({"item_id": "pc1", "user_id": "u1", "user_name": "Christian", "client": "x", "device": "x",
+                    "started_at": 1, "ended_at": 200, "listened": 200, "duration": 200, "counted": 1})
+    assert client.get("/api/artist-progress?name=Fremdriftskunstner&user=u1").json()["heard"] == 1
+    assert client.get("/api/artist-progress?name=Ukendt&user=u1").json() is None
+
+
+def test_artist_progress_without_jellyfin_is_empty(client, monkeypatch):
+    monkeypatch.setitem(main.state, "client", None)
+    assert client.get("/api/artist-progress?name=Nordlys").json() is None

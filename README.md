@@ -18,7 +18,7 @@ A Home Assistant add-on with listening statistics for music in Jellyfin, a music
 - A heatmap of when you listen
 - Smarter numbers: skip rate, listening sessions, streaks, new artists, tracks on repeat and automatic insights
 - Live "now playing", plus a backup collector that catches plays from apps that don't report it (such as Jellyfin Media Player)
-- Pages for artists, albums and tracks, with "often played next" on track pages
+- Pages for artists, albums and tracks, with progress per album on artist pages and "often played next" on track pages
 - Wrapped: a yearly summary with listener type, artist of the year, top 5 lists and fun facts
 - User comparison with a taste match and shared artists
 - Each Home Assistant user sees their own stats by default
@@ -71,7 +71,7 @@ Home Assistant-add-on med lyttestatistik for musik i Jellyfin, en musikudgave af
 - Heatmap over, hvornår du lytter
 - Smartere tal: skip-rate, lyttesessioner, streaks, nye kunstnere, gentagelser og automatiske indsigter
 - Live "spiller nu" plus en backup-opsamler, der fanger lytninger fra apps, som ikke rapporterer det (fx Jellyfin Media Player)
-- Sider for kunstnere, albums og sange med "Ofte hørt lige efter" på sangsiderne
+- Sider for kunstnere, albums og sange med fremdrift pr. album på kunstnersiderne og "Ofte hørt lige efter" på sangsiderne
 - Wrapped: årsoversigt med lyttertype, årets kunstner, top 5-lister og sjove fakta
 - Sammenligning af brugere med musiksmag-match og fælles kunstnere
 - Hver Home Assistant-bruger ser automatisk sin egen statistik

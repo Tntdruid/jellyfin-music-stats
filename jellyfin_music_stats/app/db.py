@@ -148,3 +148,6 @@ def insert_play(p: dict) -> None:
             p.get("source", "live"),
         ),
     )
+    import progress  # imported here: progress imports db
+
+    progress.forget()  # an artist's "heard" count may have changed

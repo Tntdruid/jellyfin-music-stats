@@ -361,6 +361,42 @@ async function loadDetail(kind, key) {
   renderTop("artist-tracks", a.top_tracks, (r) => trackLink(r.key));
   $("#artist-albums-card").hidden = kind !== "artist";
   renderTop("artist-albums", a.top_albums, (r) => albumLink(r.key));
+  if (kind === "artist") loadArtistProgress(key);
+  else $("#artist-progress").hidden = true;
+}
+
+// How much of the artist's music in the library has been heard, per album (current state, not the period)
+async function loadArtistProgress(name) {
+  const el = $("#artist-progress");
+  const p = new URLSearchParams({ name });
+  if (state.user) p.set("user", state.user);
+  let d = null;
+  try { d = await (await fetch(`api/artist-progress?${p}`)).json(); } catch { /* card stays hidden */ }
+  const { view, arg } = currentRoute();
+  if (view !== "artist" || arg !== name) return;  // the user moved on while Jellyfin answered
+  el.hidden = !d || !d.total;
+  if (el.hidden) return;
+  const pct = Math.round((d.heard / d.total) * 100);
+  const bar = (heard, total) => `<div class="pbar"><div style="width:${total ? (heard / total) * 100 : 0}%"></div></div>`;
+  el.innerHTML = `
+    <div class="card-head"><h2>Fremdrift</h2>
+      <span class="hint">uanset periode${state.user ? " · tæller også numre markeret som hørt i Jellyfin" : ""}</span></div>
+    <div class="progress-head">
+      <div class="progress-pct">${pct} %</div>
+      <div style="flex:1;min-width:0">
+        <div>${fmt(d.heard)} af ${fmt(d.total)} sange hørt${d.minutes_left ? ` · ${fmt(d.minutes_left / 60, 1)} t tilbage` : ""}</div>
+        ${bar(d.heard, d.total)}
+        ${d.next ? `<div class="sub">Næste at opdage: <a class="plain" href="${esc(trackLink(d.next.item_id))}"><strong>${esc(d.next.name)}</strong></a>
+          · <a class="plain" href="${esc(albumLink(d.next.album_id))}">${esc(d.next.album)}</a></div>`
+          : `<div class="sub">Du har hørt alt i biblioteket 🎉</div>`}
+      </div>
+    </div>
+    <div class="progress-albums">${d.albums.map((a) => `
+      <div class="palbum">
+        ${a.id ? `<a class="plain name" href="${esc(albumLink(a.id))}" title="${esc(a.name)}">${esc(a.name)}</a>` : `<span class="name">${esc(a.name)}</span>`}
+        ${bar(a.heard, a.total)}
+        <span class="count">${a.heard}/${a.total}</span>
+      </div>`).join("")}</div>`;
 }
 
 // --- wrapped ------------------------------------------------------------------

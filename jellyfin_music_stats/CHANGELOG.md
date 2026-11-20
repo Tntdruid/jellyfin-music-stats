@@ -2,6 +2,16 @@
 
 🇬🇧 English first, 🇩🇰 dansk nedenunder i hver version.
 
+## 0.8.0
+
+🇬🇧
+- Progress on artist pages: how much of the artist's music in your library you have heard, with a bar per album and "next to discover" – the first unheard track on the album you've come furthest with
+- Tracks Jellyfin has marked as played count too, so listening from before the add-on existed is included
+
+🇩🇰
+- Fremdrift på kunstnersider: hvor meget af kunstnerens musik i dit bibliotek du har hørt, med en bjælke pr. album og "Næste at opdage" – det første uhørte nummer på det album, du er længst med
+- Numre, som Jellyfin har markeret som spillet, tæller også med, så lytninger fra før add-on'et kommer med
+
 ## 0.7.0
 
 🇬🇧

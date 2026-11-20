@@ -24,6 +24,10 @@ Jellyfin-add-on'et kører på samme maskine, så det er nok at bruge Home Assist
 | `user_map` | Valgfri. Kobler Home Assistant-brugere til Jellyfin-brugere, når navnene er forskellige. Én linje pr. bruger, fx `christian=Tntdruid`. |
 | `genre_map` | Valgfri. Slår genrer med forskellige navne sammen. Én linje pr. genre, fx `Alternative=Alternativ`. Se [Genrer](#genrer). |
 
+## Fremdrift på kunstnersider
+
+På en kunstners side viser kortet **Fremdrift**, hvor mange af kunstnerens numre i dit Jellyfin-bibliotek du har hørt, med en bjælke pr. album og det næste nummer, du kan opdage. Et nummer tæller som hørt, hvis add-on'et har en lytning af det, eller hvis Jellyfin har det markeret som spillet for dig. Med "Alle brugere" valgt tæller alles lytninger, men ikke Jellyfins markeringer, da de hører til én bruger. Kortet viser altid status nu, uanset den valgte periode.
+
 ## Genrer
 
 Genrer kommer fra taggene i dine musikfiler, og de er ofte stavet forskelligt. Add-on'et rydder op i to trin:

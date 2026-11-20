@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 import db
 import genres as genre_names  # "genres" is also an endpoint below
 import images
+import progress
 import stats
 import views
 from backup import BackupCollector
@@ -160,6 +161,18 @@ def detail(key: str, kind: str = Query(pattern="^(artist|album|track)$"),
     if not data:
         raise HTTPException(404, "Ingen lytninger i perioden")
     return data
+
+
+@app.get("/api/artist-progress")
+async def artist_progress(name: str, user: Optional[str] = None):
+    """Heard out of all the artist's tracks in the library; null when Jellyfin can't tell."""
+    if not state["client"]:
+        return None
+    try:
+        return await progress.artist_progress(state["client"], name, user or None)
+    except Exception as e:  # the rest of the artist page works without it
+        log.warning("artist progress for %s failed: %s", name, e)
+        return None
 
 
 @app.get("/api/wrapped")

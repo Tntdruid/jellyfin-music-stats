@@ -1,5 +1,6 @@
 import time
 from typing import Optional
+from urllib.parse import quote
 
 import httpx
 
@@ -60,6 +61,27 @@ class JellyfinClient:
             "limit": limit,
             "fields": "Genres,Tags,ProductionYear",
             "enableUserData": "true",
+            "enableImages": "false",
+        })
+        r.raise_for_status()
+        return r.json().get("Items", [])
+
+    async def artist_tracks(self, name: str, user_id: Optional[str]) -> Optional[list]:
+        """Every track in the library that the artist appears on, oldest album first; None if Jellyfin
+        doesn't know the artist. With a user, each track carries that user's UserData (Played, PlayCount)."""
+        user = {"userId": user_id} if user_id else {}
+        r = await self.client.get(f"/Artists/{quote(name, safe='')}", params=user)
+        if r.status_code == 404:
+            return None
+        r.raise_for_status()
+        r = await self.client.get("/Items", params={
+            **user,
+            "artistIds": r.json()["Id"],
+            "includeItemTypes": "Audio",
+            "recursive": "true",
+            "sortBy": "ProductionYear,Album,ParentIndexNumber,IndexNumber,SortName",
+            "fields": "ProductionYear",
+            "enableUserData": "true" if user_id else "false",
             "enableImages": "false",
         })
         r.raise_for_status()
