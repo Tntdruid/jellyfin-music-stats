@@ -20,3 +20,9 @@ configuration:
   genre_map:
     name: Merge genres
     description: Genres that should count as one when their names differ. One line per genre, e.g. "Alternative=Alternativ". Case, spaces, hyphens and slashes are merged automatically.
+  smart_playlists:
+    name: Smart playlists
+    description: Creates and updates playlists in Jellyfin for each user (top 50, forgotten favourites, next to discover, morning and evening mix and moods). Refreshed every 6 hours.
+  playlist_language:
+    name: Playlist language
+    description: The language the smart playlists' names are written in.

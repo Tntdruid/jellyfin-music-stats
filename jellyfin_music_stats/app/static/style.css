@@ -193,3 +193,14 @@ a.plain:hover, .links a:hover { color: var(--accent); text-decoration: underline
 .palbum .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .palbum .pbar { margin-top: 0; height: 6px; }
 .palbum .count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; }
+
+/* --- album track list --- */
+.tracklist { width: 100%; border-collapse: collapse; margin-top: 4px; }
+.tracklist td { padding: 6px; border-top: 1px solid var(--line); }
+.tracklist td.num { width: 1%; white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+.tracklist td:nth-child(3) { white-space: nowrap; text-align: right; }
+.tracklist .mark { display: inline-block; width: 16px; color: var(--good); font-weight: 700; }
+.tracklist tr.unheard .mark { color: var(--muted); }
+.tracklist tr.unheard td:nth-child(2) { color: var(--muted); }
+.tracklist tr.disc td { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; padding-top: 14px; }
+button.btn { font: inherit; cursor: pointer; }

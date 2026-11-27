@@ -52,6 +52,15 @@ CREATE TABLE IF NOT EXISTS seen_play_counts (
     PRIMARY KEY (user_id, item_id)
 );
 
+-- playlists the add-on made in Jellyfin, so it only ever touches its own
+CREATE TABLE IF NOT EXISTS smart_playlists (
+    user_id     TEXT NOT NULL,
+    kind        TEXT NOT NULL,   -- top, forgotten, discover, morning, evening, mood:<name>
+    playlist_id TEXT NOT NULL,
+    name        TEXT,
+    PRIMARY KEY (user_id, kind)
+);
+
 -- when the backup collector started watching a user; plays before this are history, not new
 CREATE TABLE IF NOT EXISTS backup_users (
     user_id TEXT PRIMARY KEY,

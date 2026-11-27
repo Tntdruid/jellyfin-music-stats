@@ -9,7 +9,8 @@ from typing import Optional
 
 import db
 import stats
-from stats import LOCAL, MOOD_DA, WEEKDAYS, Scope
+import texts
+from stats import LOCAL, OTHER, Scope
 
 # {t} is the alias that carries the track columns (artists, album_id, item_id)
 FILTERS = {
@@ -160,7 +161,7 @@ def wrapped_years() -> list:
     return [int(r["y"]) for r in rows]
 
 
-def wrapped(year: int, user: Optional[str]) -> dict:
+def wrapped(year: int, user: Optional[str], lang: str = "da") -> dict:
     start = int(datetime(year, 1, 1).timestamp())
     end = int(datetime(year + 1, 1, 1).timestamp())
     scope = Scope(start, end, user)
@@ -189,16 +190,16 @@ def wrapped(year: int, user: Optional[str]) -> dict:
     longest = max(sessions, key=lambda x: x[-1]["ended_at"] - x[0]["started_at"]) if sessions else None
 
     genres = stats.genres(scope, "month")["totals"]
-    genres.pop("Andet", None)
+    genres.pop(OTHER, None)
     moods = stats.moods(scope, "month")["totals"]
-    moods.pop("Andet", None)
+    moods.pop(OTHER, None)
     months = stats.timeline(Scope(start, end, user), "month")
     peak = max(stats.heatmap(scope), key=lambda c: c[2])
 
     top_artists = stats.top(scope, "artists", 5)
     top_share = top_artists[0]["plays"] / s["plays"] if top_artists else 0
     mood_total = sum(moods.values()) or 1
-    persona = _persona(s, peak[0], top_share, {k: v / mood_total for k, v in moods.items()})
+    persona = _persona(s, peak[0], top_share, {k: v / mood_total for k, v in moods.items()}, lang)
 
     return {
         "year": year,
@@ -207,9 +208,9 @@ def wrapped(year: int, user: Optional[str]) -> dict:
         "top_tracks": stats.top(scope, "tracks", 5),
         "top_albums": stats.top(scope, "albums", 5),
         "genres": [{"name": k, "n": v} for k, v in list(genres.items())[:5]],
-        "moods": [{"name": k, "label": MOOD_DA.get(k, k), "n": v} for k, v in sorted(moods.items(), key=lambda kv: -kv[1])],
+        "moods": [{"name": k, "label": texts.mood(lang, k), "n": v} for k, v in sorted(moods.items(), key=lambda kv: -kv[1])],
         "months": months,
-        "peak": {"hour": peak[0], "weekday": WEEKDAYS[peak[1]]},
+        "peak": {"hour": peak[0], "weekday": peak[1]},  # 0 = Monday
         "busiest_day": busiest,
         "first_track": first_track,
         "on_repeat": on_repeat if on_repeat["n"] >= 3 else None,
@@ -222,28 +223,26 @@ def wrapped(year: int, user: Optional[str]) -> dict:
     }
 
 
-def _persona(s: dict, peak_hour: int, top_share: float, mood_share: dict) -> dict:
+def _persona(s: dict, peak_hour: int, top_share: float, mood_share: dict, lang: str = "da") -> dict:
     top_mood = max(mood_share, key=mood_share.get) if mood_share else None
     rules = [
-        (peak_hour >= 22 or peak_hour < 4, "Natteravnen", "Dine bedste lytte-timer ligger, når andre sover."),
-        (peak_hour < 9, "Morgenfuglen", "Du starter dagen med musik i ørerne."),
-        (s["discovery_rate"] > 0.4, "Opdageren", f"{round(s['discovery_rate'] * 100)} % af det, du hørte, var nyt for dig."),
-        (top_share > 0.2, "Den trofaste fan", f"Din favoritkunstner stod for {round(top_share * 100)} % af alt, du hørte."),
-        (top_mood == "party", "Festaben", "Når du trykker play, skal der danses."),
-        (top_mood == "chill", "Zen-mesteren", "Rolig musik er dit soundtrack."),
-        (top_mood in ("melancholic", "dark"), "Den eftertænksomme", "Du har ikke noget imod lidt tungsind."),
-        (top_mood in ("energetic", "aggressive"), "Energibomben", "Højt tempo og fuld skrue."),
-        (s["artists"] > 100, "Altæderen", f"{s['artists']} forskellige kunstnere – du hører lidt af det hele."),
+        (peak_hour >= 22 or peak_hour < 4, "night", {}),
+        (peak_hour < 9, "morning", {}),
+        (s["discovery_rate"] > 0.4, "explorer", {"pct": round(s["discovery_rate"] * 100)}),
+        (top_share > 0.2, "fan", {"pct": round(top_share * 100)}),
+        (top_mood == "party", "party", {}),
+        (top_mood == "chill", "chill", {}),
+        (top_mood in ("melancholic", "dark"), "moody", {}),
+        (top_mood in ("energetic", "aggressive"), "energy", {}),
+        (s["artists"] > 100, "omnivore", {"n": s["artists"]}),
     ]
-    for ok, title, text in rules:
-        if ok:
-            return {"title": title, "text": text}
-    return {"title": "Musikelskeren", "text": "Musik er en fast del af din hverdag."}
+    kind, values = next(((k, v) for ok, k, v in rules if ok), ("default", {}))
+    return {"title": texts.tr(lang, f"persona.{kind}.title"), "text": texts.tr(lang, f"persona.{kind}.text", **values)}
 
 
 # --- compare ---------------------------------------------------------------
 
-def compare(scope: Scope) -> dict:
+def compare(scope: Scope, lang: str = "da") -> dict:
     users = [u for u in stats.users() if u["id"]]
     people = []
     vectors = {}
@@ -255,9 +254,9 @@ def compare(scope: Scope) -> dict:
         artists = stats.top(us, "artists", 200)
         vectors[u["id"]] = {a["name"]: a["plays"] for a in artists}
         genres = stats.genres(us, "month")["totals"]
-        genres.pop("Andet", None)
+        genres.pop(OTHER, None)
         moods = stats.moods(us, "month")["totals"]
-        moods.pop("Andet", None)
+        moods.pop(OTHER, None)
         heat = stats.heatmap(us)
         hours = Counter()
         for h, _, n in heat:
@@ -269,7 +268,7 @@ def compare(scope: Scope) -> dict:
             "top_artist": artists[0] if artists else None,
             "top_track": (stats.top(us, "tracks", 1) or [None])[0],
             "top_genre": next(iter(genres), None),
-            "top_mood": MOOD_DA.get(max(moods, key=moods.get)) if moods else None,
+            "top_mood": texts.mood(lang, max(moods, key=moods.get)) if moods else None,
             "peak_hour": hours.most_common(1)[0][0] if hours else None,
         })
 
@@ -298,26 +297,26 @@ def _cosine(a: dict, b: dict) -> float:
 
 # --- export ----------------------------------------------------------------
 
-def export_csv(scope: Scope) -> str:
+def export_csv(scope: Scope, lang: str = "da") -> str:
     where, params = scope.where(counted=None, alias="p")
     rows = db.query(
         f"""SELECT datetime(p.started_at,{LOCAL}) AS tidspunkt, p.user_name AS bruger, t.name AS titel,
                    t.artists, t.album, t.album_artist, t.year, t.genres, t.moods,
                    ROUND(p.listened) AS lyttet_sek, ROUND(p.duration) AS laengde_sek, p.counted,
-                   p.client AS klient, p.device AS enhed
+                   p.client AS klient, p.device AS enhed, p.source AS kilde
             FROM plays p LEFT JOIN tracks t USING(item_id)
             WHERE {where} ORDER BY p.started_at""",
         params,
     )
     out = io.StringIO()
     w = csv.writer(out, delimiter=";")  # semicolon so Danish Excel opens it directly
-    w.writerow(["tidspunkt", "bruger", "titel", "kunstnere", "album", "albumkunstner", "år", "genrer", "humør",
-                "lyttet_sek", "længde_sek", "talt_som_lytning", "klient", "enhed"])
+    w.writerow(texts.tr(lang, "csv.header").split(";"))
+    yes, no = texts.tr(lang, "csv.yes"), texts.tr(lang, "csv.no")
     for r in rows:
         w.writerow([
             r["tidspunkt"], r["bruger"], r["titel"], _join(r["artists"]), r["album"], r["album_artist"], r["year"],
-            _join(r["genres"]), ", ".join(MOOD_DA.get(m, m) for m in json.loads(r["moods"] or "[]")),
-            r["lyttet_sek"], r["laengde_sek"], "ja" if r["counted"] else "nej", r["klient"], r["enhed"],
+            _join(r["genres"]), ", ".join(texts.mood(lang, m) for m in json.loads(r["moods"] or "[]")),
+            r["lyttet_sek"], r["laengde_sek"], yes if r["counted"] else no, r["klient"], r["enhed"], r["kilde"],
         ])
     return "﻿" + out.getvalue()  # BOM so Excel picks UTF-8 for æøå
 

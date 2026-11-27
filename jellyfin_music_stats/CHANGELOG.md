@@ -2,6 +2,22 @@
 
 🇬🇧 English first, 🇩🇰 dansk nedenunder i hver version.
 
+## 0.9.0
+
+🇬🇧
+- Smart playlists in Jellyfin (option `smart_playlists`, off by default): top 50 of the last 30 days, forgotten favourites, next to discover, morning and evening mix and one per mood, private to each user and refreshed every 6 hours. Option `playlist_language` picks Danish or English names.
+- "Never heard" tab: how much of your library you've heard, and the albums and artists you've never played, newest first
+- Album pages show the full track list with a mark for heard tracks and the number of plays
+- The pages are now in English and Danish, following the browser; the EN/DA button switches. Insights, listener types, mood names, error messages and the CSV export follow too.
+- Released under the MIT license
+
+🇩🇰
+- Smarte playlister i Jellyfin (indstillingen `smart_playlists`, slået fra som standard): top 50 for de seneste 30 dage, glemte favoritter, næste at opdage, morgen- og aften-mix og én pr. humør, private for hver bruger og opdateret hver 6. time. `playlist_language` vælger danske eller engelske navne.
+- Fanen "Aldrig hørt": hvor meget af biblioteket du har hørt, og de albums og kunstnere, du aldrig har spillet, nyeste først
+- Albumsider viser hele sporlisten med ✓ for hørte numre og antal lytninger
+- Siderne findes nu på dansk og engelsk efter browserens sprog; knappen EN/DA skifter. Indsigter, lyttertyper, humørnavne, fejlbeskeder og CSV-eksporten følger med.
+- Udgivet under MIT-licensen
+
 ## 0.8.0
 
 🇬🇧

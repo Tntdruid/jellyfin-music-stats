@@ -22,6 +22,8 @@ class Settings:
     user_map: Dict[str, str] = field(default_factory=dict)
     # "from=to" entries that merge genres the automatic merging can't see are the same
     genre_map: List[str] = field(default_factory=list)
+    smart_playlists: bool = False
+    playlist_language: str = "da"
 
     @property
     def collector_enabled(self) -> bool:
@@ -45,6 +47,9 @@ def load_settings() -> Settings:
         lastfm_api_key=str(pick("lastfm_api_key", "")).strip(),
         user_map=parse_user_map(options.get("user_map") or os.environ.get("USER_MAP", "").split(",")),
         genre_map=list(options.get("genre_map") or [e for e in os.environ.get("GENRE_MAP", "").split(",") if e]),
+        # booleans can't use pick(): False is a real answer, not a missing one
+        smart_playlists=bool(options.get("smart_playlists", os.environ.get("SMART_PLAYLISTS", "") in ("1", "true"))),
+        playlist_language=str(pick("playlist_language", "da")),
     )
 
 

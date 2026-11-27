@@ -87,6 +87,69 @@ class JellyfinClient:
         r.raise_for_status()
         return r.json().get("Items", [])
 
+    async def album_tracks(self, album_id: str, user_id: Optional[str]) -> Optional[list]:
+        """The album's tracks in disc and track order; None if Jellyfin doesn't have the album any more."""
+        user = {"userId": user_id} if user_id else {}
+        r = await self.client.get("/Items", params={
+            **user,
+            "parentId": album_id,
+            "includeItemTypes": "Audio",
+            "recursive": "true",
+            "sortBy": "ParentIndexNumber,IndexNumber,SortName",
+            "enableUserData": "true" if user_id else "false",
+            "enableImages": "false",
+        })
+        if r.status_code in (400, 404):
+            return None
+        r.raise_for_status()
+        return r.json().get("Items", []) or None
+
+    async def library_tracks(self, user_id: Optional[str]) -> list:
+        """Every track in the music libraries, with when it was added."""
+        user = {"userId": user_id} if user_id else {}
+        r = await self.client.get("/Items", params={
+            **user,
+            "includeItemTypes": "Audio",
+            "recursive": "true",
+            "fields": "DateCreated,ProductionYear",
+            "enableUserData": "true" if user_id else "false",
+            "enableImages": "false",
+        }, timeout=60)
+        r.raise_for_status()
+        return r.json().get("Items", [])
+
+    # --- playlists (written by the smart playlists) ---
+
+    async def playlist_exists(self, playlist_id: str, user_id: str) -> bool:
+        r = await self.client.get("/Items", params={"ids": playlist_id, "userId": user_id, "enableImages": "false"})
+        r.raise_for_status()
+        return bool(r.json().get("Items"))
+
+    async def playlist_track_ids(self, playlist_id: str, user_id: str) -> list:
+        r = await self.client.get(f"/Playlists/{playlist_id}/Items", params={"userId": user_id, "enableImages": "false"})
+        r.raise_for_status()
+        return [it["Id"] for it in r.json().get("Items", [])]
+
+    async def create_playlist(self, name: str, user_id: str, ids: list) -> str:
+        r = await self.client.post("/Playlists", json={
+            "Name": name, "Ids": ids, "UserId": user_id, "MediaType": "Audio", "IsPublic": False,
+        })
+        r.raise_for_status()
+        return r.json()["Id"]
+
+    async def update_playlist(self, playlist_id: str, name: str, ids: list) -> bool:
+        """Replace name and tracks in one go; False on Jellyfin versions without this endpoint (before 10.9)."""
+        r = await self.client.post(f"/Playlists/{playlist_id}", json={"Name": name, "Ids": ids})
+        if r.status_code in (404, 405):
+            return False
+        r.raise_for_status()
+        return True
+
+    async def delete_item(self, item_id: str) -> None:
+        r = await self.client.delete(f"/Items/{item_id}")
+        if r.status_code != 404:
+            r.raise_for_status()
+
     async def image(self, item_id: str, max_width: int = 300) -> Optional[httpx.Response]:
         r = await self.client.get(
             f"/Items/{item_id}/Images/Primary", params={"maxWidth": max_width, "quality": 85}

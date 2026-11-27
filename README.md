@@ -10,7 +10,7 @@
 
 ## English
 
-A Home Assistant add-on with listening statistics for music in Jellyfin, a music take on Jellystat. It is the music sibling of [Jellyfin Video Stats](https://github.com/Tntdruid/jellyfin-video-stats). The add-on's own pages are in Danish.
+A Home Assistant add-on with listening statistics for music in Jellyfin, a music take on Jellystat. It is the music sibling of [Jellyfin Video Stats](https://github.com/Tntdruid/jellyfin-video-stats).
 
 - Listens and listening time per day, week and month, compared with the previous period
 - Top artists, albums and tracks with covers, which are stored locally and survive the album being deleted
@@ -18,11 +18,14 @@ A Home Assistant add-on with listening statistics for music in Jellyfin, a music
 - A heatmap of when you listen
 - Smarter numbers: skip rate, listening sessions, streaks, new artists, tracks on repeat and automatic insights
 - Live "now playing", plus a backup collector that catches plays from apps that don't report it (such as Jellyfin Media Player)
-- Pages for artists, albums and tracks, with progress per album on artist pages and "often played next" on track pages
+- Pages for artists, albums and tracks, with progress per album on artist pages, the full track list on album pages and "often played next" on track pages
+- "Never heard": how much of your library you've heard, and the albums and artists you've never played
+- Smart playlists in Jellyfin, kept up to date: top 50, forgotten favourites, next to discover, morning and evening mix and moods
 - Wrapped: a yearly summary with listener type, artist of the year, top 5 lists and fun facts
 - User comparison with a taste match and shared artists
 - Each Home Assistant user sees their own stats by default
-- CSV export of plays (opens directly in Danish Excel)
+- CSV export of plays (opens directly in Excel)
+- Pages in English and Danish
 
 See [jellyfin_music_stats/DOCS.md](jellyfin_music_stats/DOCS.md) for setup (in Danish).
 
@@ -71,11 +74,14 @@ Home Assistant-add-on med lyttestatistik for musik i Jellyfin, en musikudgave af
 - Heatmap over, hvornår du lytter
 - Smartere tal: skip-rate, lyttesessioner, streaks, nye kunstnere, gentagelser og automatiske indsigter
 - Live "spiller nu" plus en backup-opsamler, der fanger lytninger fra apps, som ikke rapporterer det (fx Jellyfin Media Player)
-- Sider for kunstnere, albums og sange med fremdrift pr. album på kunstnersiderne og "Ofte hørt lige efter" på sangsiderne
+- Sider for kunstnere, albums og sange med fremdrift pr. album på kunstnersiderne, hele sporlisten på albumsiderne og "Ofte hørt lige efter" på sangsiderne
+- "Aldrig hørt": hvor meget af biblioteket du har hørt, og de albums og kunstnere, du aldrig har spillet
+- Smarte playlister i Jellyfin, der holdes opdateret: top 50, glemte favoritter, næste at opdage, morgen- og aften-mix og humør
 - Wrapped: årsoversigt med lyttertype, årets kunstner, top 5-lister og sjove fakta
 - Sammenligning af brugere med musiksmag-match og fælles kunstnere
 - Hver Home Assistant-bruger ser automatisk sin egen statistik
-- Eksport af afspilninger til CSV (åbner direkte i dansk Excel)
+- Eksport af afspilninger til CSV (åbner direkte i Excel)
+- Sider på dansk og engelsk
 
 Se [jellyfin_music_stats/DOCS.md](jellyfin_music_stats/DOCS.md) for opsætning.
 

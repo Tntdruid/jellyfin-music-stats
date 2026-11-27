@@ -20,6 +20,7 @@ from backup import BackupCollector
 from collector import Collector
 from config import load_settings
 from enrich import Enricher
+from playlists import PlaylistKeeper
 from jellyfin import JellyfinClient
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -44,6 +45,9 @@ async def lifespan(app: FastAPI):
         state.update(client=client, collector=collector, backup=backup)
         tasks.append(asyncio.create_task(collector.run()))
         tasks.append(asyncio.create_task(backup.run()))
+        if settings.smart_playlists:
+            tasks.append(asyncio.create_task(PlaylistKeeper(client, settings.playlist_language).run()))
+            log.info("smart playlists on (%s)", settings.playlist_language)
         log.info("collecting from %s every %ss", settings.jellyfin_url, settings.poll_interval)
     else:
         log.warning("jellyfin_url/api_key not set - collector disabled, serving existing data only")
@@ -79,14 +83,14 @@ def current_user(request: Request, users: list) -> dict:
 
 
 @app.get("/api/meta")
-def meta(request: Request):
+def meta(request: Request, lang: str = "da"):
     c = state["collector"]
     users = stats.users()
     return {
         "users": users,
         "me": current_user(request, users),
         "first_play": stats.first_play(),
-        "moods": stats.mood_labels(),
+        "moods": stats.mood_labels(lang),
         "collector": {
             "enabled": settings.collector_enabled,
             "last_poll": c.state.last_poll if c else None,
@@ -150,8 +154,9 @@ def recent(start: Optional[int] = None, end: Optional[int] = None, user: Optiona
 
 
 @app.get("/api/insights")
-def insights(start: Optional[int] = None, end: Optional[int] = None, user: Optional[str] = None):
-    return stats.insights(scope(start, end, user))
+def insights(start: Optional[int] = None, end: Optional[int] = None, user: Optional[str] = None,
+             lang: str = "da"):
+    return stats.insights(scope(start, end, user), lang)
 
 
 @app.get("/api/detail")
@@ -175,22 +180,47 @@ async def artist_progress(name: str, user: Optional[str] = None):
         return None
 
 
+@app.get("/api/album-tracks")
+async def album_tracks(id: str, user: Optional[str] = None):
+    """Every track on the album with plays and heard marks; null when Jellyfin can't tell."""
+    if not state["client"]:
+        return None
+    try:
+        return await progress.album_tracks(state["client"], id, user or None)
+    except Exception as e:
+        log.warning("album tracks for %s failed: %s", id, e)
+        return None
+
+
+@app.get("/api/never-heard")
+async def never_heard(user: Optional[str] = None):
+    """Albums and artists in the library nobody (or this user) has listened to; null without Jellyfin."""
+    if not state["client"]:
+        return None
+    try:
+        return await progress.never_heard(state["client"], user or None)
+    except Exception as e:
+        log.warning("library overview failed: %s", e)
+        return None
+
+
 @app.get("/api/wrapped")
-def wrapped(year: Optional[int] = None, user: Optional[str] = None):
+def wrapped(year: Optional[int] = None, user: Optional[str] = None, lang: str = "da"):
     years = views.wrapped_years()
     year = year or (years[0] if years else datetime.now().year)
-    return {"years": years, **views.wrapped(year, user or None)}
+    return {"years": years, **views.wrapped(year, user or None, lang)}
 
 
 @app.get("/api/compare")
-def compare(start: Optional[int] = None, end: Optional[int] = None):
-    return views.compare(scope(start, end, None))
+def compare(start: Optional[int] = None, end: Optional[int] = None, lang: str = "da"):
+    return views.compare(scope(start, end, None), lang)
 
 
 @app.get("/api/export.csv")
-def export(start: Optional[int] = None, end: Optional[int] = None, user: Optional[str] = None):
+def export(start: Optional[int] = None, end: Optional[int] = None, user: Optional[str] = None,
+           lang: str = "da"):
     filename = f"musikstatistik-{datetime.now():%Y-%m-%d}.csv"
-    return Response(views.export_csv(scope(start, end, user)), media_type="text/csv; charset=utf-8",
+    return Response(views.export_csv(scope(start, end, user), lang), media_type="text/csv; charset=utf-8",
                     headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 

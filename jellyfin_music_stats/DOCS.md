@@ -23,10 +23,34 @@ Jellyfin-add-on'et kører på samme maskine, så det er nok at bruge Home Assist
 | `lastfm_api_key` | Valgfri. Henter humør-tags fra Last.fm for numre, der ikke har nogen. Du kan få en gratis nøgle på https://www.last.fm/api/account/create |
 | `user_map` | Valgfri. Kobler Home Assistant-brugere til Jellyfin-brugere, når navnene er forskellige. Én linje pr. bruger, fx `christian=Tntdruid`. |
 | `genre_map` | Valgfri. Slår genrer med forskellige navne sammen. Én linje pr. genre, fx `Alternative=Alternativ`. Se [Genrer](#genrer). |
+| `smart_playlists` | Laver og opdaterer playlister i Jellyfin for hver bruger. Slået fra som standard. Se [Smarte playlister](#smarte-playlister). |
+| `playlist_language` | Sproget for playlisternes navne: `da` eller `en`. |
+
+## Sprog
+
+Siderne vises på dansk eller engelsk efter browserens sprog. Knappen **EN**/**DA** øverst skifter sprog, og valget huskes i den browser.
 
 ## Fremdrift på kunstnersider
 
 På en kunstners side viser kortet **Fremdrift**, hvor mange af kunstnerens numre i dit Jellyfin-bibliotek du har hørt, med en bjælke pr. album og det næste nummer, du kan opdage. Et nummer tæller som hørt, hvis add-on'et har en lytning af det, eller hvis Jellyfin har det markeret som spillet for dig. Med "Alle brugere" valgt tæller alles lytninger, men ikke Jellyfins markeringer, da de hører til én bruger. Kortet viser altid status nu, uanset den valgte periode.
+
+På en albumside viser **Sporliste** alle albummets numre med ✓ for hørt og antal lytninger.
+
+## Aldrig hørt
+
+Fanen **Aldrig hørt** viser, hvor stor en del af biblioteket du har hørt, og hvilke albums og kunstnere du aldrig har spillet. De nyeste i biblioteket står først. Fanen kræver forbindelse til Jellyfin.
+
+## Smarte playlister
+
+Med `smart_playlists` slået til får hver Jellyfin-bruger disse playlister, som opdateres hver 6. time:
+
+- **🎧 Top 50 – seneste 30 dage**
+- **🎧 Glemte favoritter:** numre, du har hørt mindst 4 gange, men ikke i 90 dage
+- **🎧 Næste at opdage:** uhørte numre fra de kunstnere, du har hørt mest de seneste 90 dage, startende med de albums, du er længst med
+- **🎧 Morgen-mix** (kl. 5–11) og **🎧 Aften-mix** (kl. 18–24): det, du typisk hører på de tidspunkter
+- **🎧 Humør: …** for hvert humør, du har lyttet til
+
+Playlisterne er private for brugeren og kan bruges i alle Jellyfin-apps. Add-on'et ændrer kun de playlister, det selv har lavet. En playliste med færre end 5 numre bliver fjernet, indtil der er data nok. Sletter du en i Jellyfin, bliver den lavet igen ved næste opdatering. Slår du indstillingen fra, bliver playlisterne liggende, og du kan slette dem i Jellyfin.
 
 ## Genrer
 

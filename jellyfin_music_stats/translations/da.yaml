@@ -20,3 +20,9 @@ configuration:
   genre_map:
     name: Slå genrer sammen
     description: Genrer, der skal tælle som én, når navnene er forskellige. Én linje pr. genre, fx "Alternative=Alternativ". Store/små bogstaver, mellemrum, bindestreger og skråstreger slås sammen automatisk.
+  smart_playlists:
+    name: Smarte playlister
+    description: Laver og opdaterer playlister i Jellyfin for hver bruger (top 50, glemte favoritter, næste at opdage, morgen- og aften-mix og humør). Opdateres hver 6. time.
+  playlist_language:
+    name: Sprog for playlister
+    description: Sproget, de smarte playlisters navne skrives på.

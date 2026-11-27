@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 
 import db
+import texts
 
 LOCAL = "'unixepoch','localtime'"
 BUCKETS = {
@@ -13,11 +14,8 @@ BUCKETS = {
     "month": f"strftime('%Y-%m-01',started_at,{LOCAL})",
 }
 SESSION_GAP = 30 * 60
-WEEKDAYS = ["mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag"]
-MOOD_DA = {
-    "energetic": "energisk", "happy": "glad", "chill": "rolig", "melancholic": "melankolsk",
-    "dark": "mørk", "romantic": "romantisk", "aggressive": "aggressiv", "party": "festlig",
-}
+MOOD_NAMES = list(texts.MOODS["da"])
+OTHER = "__other__"  # series name for everything outside the top genres/moods; the page labels it
 
 
 @dataclass
@@ -236,10 +234,10 @@ def _series_over_time(scope: Scope, bucket: str, field: str, limit: int) -> dict
     labels = _bucket_range(scope, bucket)
     grid = defaultdict(lambda: defaultdict(int))
     for r in rows:
-        key = r["k"] if r["k"] in keys else "Andet"
+        key = r["k"] if r["k"] in keys else OTHER
         grid[key][r["b"]] += r["n"]
-    if "Andet" in grid:
-        keys.append("Andet")
+    if OTHER in grid:
+        keys.append(OTHER)
     return {
         "labels": labels,
         "totals": {k: totals.get(k, sum(grid[k].values())) for k in keys},
@@ -252,7 +250,7 @@ def genres(scope: Scope, bucket: str) -> dict:
 
 
 def moods(scope: Scope, bucket: str) -> dict:
-    data = _series_over_time(scope, bucket, "moods", len(MOOD_DA))
+    data = _series_over_time(scope, bucket, "moods", len(MOOD_NAMES))
     cte, params = _plays_cte(scope)
     by_hour = db.query(
         f"""{cte} SELECT CAST(strftime('%H',started_at,{LOCAL}) AS INTEGER) AS h, m.value AS mood, COUNT(*) AS n
@@ -292,8 +290,8 @@ def recent(scope: Scope, limit: int = 15) -> list:
 
 # --- insights -------------------------------------------------------------
 
-def insights(scope: Scope) -> list:
-    """Short observations in Danish, most interesting first."""
+def insights(scope: Scope, lang: str = "da") -> list:
+    """Short observations, most interesting first."""
     out = []
     cte, params = _plays_cte(scope)
     if not db.query(f"{cte} SELECT 1 FROM p LIMIT 1", params):
@@ -302,24 +300,27 @@ def insights(scope: Scope) -> list:
     peak = heatmap(scope)
     if peak:
         h, wd, _ = max(peak, key=lambda x: x[2])
-        out.append({"icon": "clock", "text": f"Du lytter mest om {WEEKDAYS[wd]}en omkring kl. {h:02d}."})
+        out.append({"icon": "clock", "text": texts.tr(lang, "insight.peak", day=texts.WEEKDAYS[texts.lang_of(lang)][wd],
+                                                      hour=f"{h:02d}")})
 
     loyal = top(scope, "artists", 1)
     if loyal:
         a = loyal[0]
-        out.append({"icon": "star", "text": f"{a['name']} er din mest spillede kunstner: {a['plays']} lytninger fordelt på {a['days']} dage."})
+        out.append({"icon": "star", "text": texts.tr(lang, "insight.loyal", artist=a["name"], plays=a["plays"], days=a["days"])})
 
     # everything is "new" when the range reaches back to the very first play
     new = _new_artists(scope) if scope.start > (first_play() or 0) + 14 * 86400 else {}
     if new:
         best = max(new.values(), key=lambda r: r["in_range"])
         if best["in_range"] >= 3:
-            when = datetime.fromtimestamp(best["first"]).strftime("%d.%m")
-            out.append({"icon": "sparkle", "text": f"Nyopdaget: {best['artist']}. Første lytning var {when}, og du har hørt dem {best['in_range']} gange siden."})
+            when = texts.date(lang, datetime.fromtimestamp(best["first"]))
+            out.append({"icon": "sparkle", "text": texts.tr(lang, "insight.new", artist=best["artist"], date=when,
+                                                            n=best["in_range"])})
 
     redisc = _rediscovered(scope)
     if redisc:
-        out.append({"icon": "rewind", "text": f"Genfundet: {redisc['artist']} efter {redisc['gap']} dages pause."})
+        out.append({"icon": "rewind", "text": texts.tr(lang, "insight.rediscovered", artist=redisc["artist"],
+                                                       days=redisc["gap"])})
 
     rep = db.query(
         f"""{cte} SELECT MAX(name) AS name, date(started_at,{LOCAL}) AS d, COUNT(*) AS n
@@ -327,16 +328,19 @@ def insights(scope: Scope) -> list:
         params,
     )
     if rep and rep[0]["n"] >= 4:
-        d = date.fromisoformat(rep[0]["d"]).strftime("%d.%m")
-        out.append({"icon": "repeat", "text": f"På repeat: \"{rep[0]['name']}\" blev spillet {rep[0]['n']} gange den {d}."})
+        d = texts.date(lang, date.fromisoformat(rep[0]["d"]))
+        out.append({"icon": "repeat", "text": texts.tr(lang, "insight.repeat", track=rep[0]["name"], n=rep[0]["n"], date=d)})
 
     skip = _most_skipped(scope)
     if skip:
-        out.append({"icon": "skip", "text": f"Du springer oftest {skip['artist']} over ({round(skip['rate'] * 100)} % af afspilningerne)."})
+        out.append({"icon": "skip", "text": texts.tr(lang, "insight.skip", artist=skip["artist"],
+                                                     pct=round(skip["rate"] * 100))})
 
     mood_shift = _weekend_mood(scope)
     if mood_shift:
-        out.append({"icon": "mood", "text": mood_shift})
+        mood, diff = mood_shift
+        key = "insight.weekend" if diff > 0 else "insight.weekdays"
+        out.append({"icon": "mood", "text": texts.tr(lang, key, mood=texts.mood(lang, mood), pct=round(abs(diff) * 100))})
 
     night = db.query(
         f"""{cte} SELECT AVG(CASE WHEN CAST(strftime('%H',started_at,{LOCAL}) AS INTEGER) >= 23
@@ -344,7 +348,7 @@ def insights(scope: Scope) -> list:
         params,
     )[0]["r"]
     if night and night > 0.15:
-        out.append({"icon": "moon", "text": f"Natteravn: {round(night * 100)} % af din lytning sker mellem kl. 23 og 04."})
+        out.append({"icon": "moon", "text": texts.tr(lang, "insight.night", pct=round(night * 100))})
     return out
 
 
@@ -377,7 +381,8 @@ def _most_skipped(scope: Scope) -> Optional[dict]:
     return rows[0] if rows and rows[0]["rate"] >= 0.3 else None
 
 
-def _weekend_mood(scope: Scope) -> Optional[str]:
+def _weekend_mood(scope: Scope) -> Optional[tuple]:
+    """The mood whose share differs most between weekends and weekdays: (mood, weekend share - weekday share)."""
     cte, params = _plays_cte(scope)
     rows = db.query(
         f"""{cte} SELECT CAST(strftime('%w',started_at,{LOCAL}) AS INTEGER) IN (0,6) AS weekend,
@@ -391,13 +396,10 @@ def _weekend_mood(scope: Scope) -> Optional[str]:
     tot = {k: sum(v.values()) for k, v in share.items()}
     if tot[0] < 20 or tot[1] < 20:
         return None
-    diffs = {m: share[1][m] / tot[1] - share[0][m] / tot[0] for m in MOOD_DA}
+    diffs = {m: share[1][m] / tot[1] - share[0][m] / tot[0] for m in MOOD_NAMES}
     mood, diff = max(diffs.items(), key=lambda kv: abs(kv[1]))
-    if abs(diff) < 0.05:
-        return None
-    side = "weekenden" if diff > 0 else "hverdagene"
-    return f"I {side} hører du mere {MOOD_DA[mood]} musik ({round(abs(diff) * 100)} procentpoint mere)."
+    return (mood, diff) if abs(diff) >= 0.05 else None
 
 
-def mood_labels() -> dict:
-    return MOOD_DA
+def mood_labels(lang: str = "da") -> dict:
+    return texts.MOODS[texts.lang_of(lang)]

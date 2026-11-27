@@ -42,23 +42,23 @@ class ActivePlay:
     album_id: Optional[str] = None
 
 
-def describe_error(e: Exception) -> str:
+def describe_error(e: Exception) -> dict:
+    """A code the page turns into a sentence in its own language, plus the technical detail."""
     if isinstance(e, httpx.HTTPStatusError):
-        if e.response.status_code in (401, 403):
-            return "Jellyfin afviste API-nøglen – tjek api_key i add-on'ets konfiguration"
-        return f"Jellyfin svarede {e.response.status_code}"
+        code = "auth" if e.response.status_code in (401, 403) else "http"
+        return {"code": code, "detail": str(e.response.status_code)}
     if isinstance(e, httpx.ConnectError):
-        return f"Kan ikke forbinde til Jellyfin – tjek jellyfin_url ({e})"
+        return {"code": "connect", "detail": str(e)}
     if isinstance(e, httpx.TimeoutException):
-        return "Jellyfin svarer ikke (timeout)"
-    return str(e)
+        return {"code": "timeout", "detail": ""}
+    return {"code": "other", "detail": str(e)}
 
 
 @dataclass
 class CollectorState:
     active: Dict[str, ActivePlay] = field(default_factory=dict)
     last_poll: Optional[float] = None
-    last_error: Optional[str] = None
+    last_error: Optional[dict] = None  # {code, detail} from describe_error
     plays_recorded: int = 0
 
 
@@ -78,7 +78,7 @@ class Collector:
                 self.state.last_error = None
             except Exception as e:  # keep polling; Jellyfin may just be restarting
                 self.state.last_error = describe_error(e)
-                log.warning("poll failed: %s", self.state.last_error)
+                log.warning("poll failed: %(code)s %(detail)s", self.state.last_error)
             await asyncio.sleep(self.settings.poll_interval)
 
     async def poll(self) -> None:

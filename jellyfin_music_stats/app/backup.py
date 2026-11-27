@@ -42,7 +42,7 @@ class BackupCollector:
     def __init__(self, client: JellyfinClient, collector: Collector):
         self.client = client
         self.collector = collector
-        self.last_error: Optional[str] = None
+        self.last_error: Optional[dict] = None
         self.plays_recorded = 0
 
     async def run(self) -> None:
